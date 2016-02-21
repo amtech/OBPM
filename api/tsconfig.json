@@ -1,0 +1,30 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "newLine": "LF",
+        "outDir": "./dist",
+        "sourceMap": true
+    },
+    "filesGlob": [
+        "**/*.ts",
+        "**/*.tsx",
+        "!node_modules/**"
+    ],
+    "compileOnSave": true,
+    "buildOnSave": false,
+    "atom": {
+        "rewriteTsconfig": true
+    },
+    "files": [
+        "lib/Api.ts",
+        "lib/controllers/TestCtrl.ts",
+        "lib/index.ts",
+        "lib/Router.ts",
+        "typings/express/express.d.ts",
+        "typings/extend/extend.d.ts",
+        "typings/mime/mime.d.ts",
+        "typings/node/node.d.ts",
+        "typings/serve-static/serve-static.d.ts",
+        "typings/tsd.d.ts"
+    ]
+}

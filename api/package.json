@@ -1,0 +1,30 @@
+{
+  "name": "obpm-api",
+  "version": "0.0.1",
+  "description": "API service for OBPM.",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "arangojs": "^4.3.0",
+    "express": "^4.13.4",
+    "extend": "^3.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "mocha",
+    "start": "node ./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remolueoend/OBPM.git"
+  },
+  "keywords": [
+    "OBPM",
+    "ZHAW"
+  ],
+  "author": "Remo Zumsteg <remo.zmstg@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/remolueoend/OBPM/issues"
+  },
+  "homepage": "https://github.com/remolueoend/OBPM#readme"
+}
