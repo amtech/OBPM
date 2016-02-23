@@ -1,0 +1,12 @@
+= FOXX Services
+PRO:
+    - Enge Verbindung zu Datenbank, Datenbank und Micorservice laufen im gleichen Kontext.
+    - Kein eigenes Handling des Datenbank-Kontext nötig.
+KONTRA:
+    - Keine Debugging-Möglichkeiten, da --debug nicht unterstützt wird (auch kein Node-Inspector)
+    - Keine Unerstützung für NPM-Pakete, welche Referenzen zu internen Nodejs-Modulen haben.
+    - Keine asynchrone Laufzeitumegebung, sondern basierend auf Thread-Pools.
+
+= Dokumentations-Verwaltung:
+    - Github: 
+    - OneDrive: 
