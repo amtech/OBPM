@@ -37,7 +37,7 @@ export class App{
      * @returns {App} new Api App instance.
      */
     constructor(options?: ApiOptions){
-        this.opts = extend({}, options || {}, _defApiOpts);
+        this.opts = extend({}, _defApiOpts, (options || {}));
         this.express = express();
         this._router = new Router(this.express);
     }
