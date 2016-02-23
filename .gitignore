@@ -37,3 +37,9 @@ typings
 
 # Dist
 /api/dist
+
+# Docs
+/doc/**/*
+
+# Doc Exceptions
+# !/doc/Test.docx
