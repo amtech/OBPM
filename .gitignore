@@ -42,4 +42,4 @@ typings
 /doc/**/*
 
 # Doc Exceptions
-# !/doc/Test.docx
+!/doc/Test.docx
