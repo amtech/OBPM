@@ -8,5 +8,9 @@ KONTRA:
     - Keine asynchrone Laufzeitumegebung, sondern basierend auf Thread-Pools.
 
 = Dokumentations-Verwaltung:
-    - Github: 
-    - OneDrive: 
+    - Github: Alles an einem Ort, schlechte Vergleichstools wenn Office, wenn textbasiert sehr geeignet.
+    - OneDrive: Separate Cloud, jedoch sehr brauchbar für Office-Doks => Parallelle Bearbeitung, Online-Bearbeitung, Auto-Sync.
+
+= Dokumenten-Types:
+    - Office: Sehr verbreitet (durchlesen), Blackbox, keine Einarbeitungszeit.
+    - Latex:  Mehr Einarbeitungszeit, jedoch offenes Format und textbasiert (siehe Github Verwaltung) => schwierig zum sharen/durchlesen.
