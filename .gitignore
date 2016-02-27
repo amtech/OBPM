@@ -34,6 +34,7 @@ node_modules
 
 # Typescript
 typings
+.tscache
 
 # Dist
 /api/dist
@@ -44,3 +45,6 @@ typings
 # Doc Exceptions
 !/doc/Test.docx
 !/doc/entscheidungen.txt
+
+# IDEs
+.idea

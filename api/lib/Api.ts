@@ -4,28 +4,35 @@ import * as http from 'http';
 import Router from './Router';
 
 export interface ApiOptions{
-    apiHost?: string
-    apiPort?: number
-    dbHost?: string
-    dbPort?: number
+    apiHost?: string;
+    apiPort?: number;
+    dbHost?: string;
+    dbPort?: number;
 }
 
-var _defApiOpts: ApiOptions = {
-    dbHost: 'localhost',
-    dbPort: 8529,
-    apiHost: 'localhost',
-    apiPort: 8080
-};
+
 
 /**
  * Base API wrapper class.
  */
-export class App{
+export class App {
     opts: ApiOptions;
     express: express.Express;
     private _server: http.Server;
     private _initialized: boolean;
     private _router: Router;
+
+    /**
+     * Default Api options.
+     * @type {{dbHost: string, dbPort: number, apiHost: string, apiPort: number}}
+     * @private
+     */
+    private static _defApiOpts: ApiOptions = {
+        dbHost: 'localhost',
+        dbPort: 8529,
+        apiHost: 'localhost',
+        apiPort: 8080
+    };
 
     /**
      * Creates a new API instance.
@@ -37,7 +44,7 @@ export class App{
      * @returns {App} new Api App instance.
      */
     constructor(options?: ApiOptions){
-        this.opts = extend({}, _defApiOpts, (options || {}));
+        this.opts = extend({}, App._defApiOpts, (options || {}));
         this.express = express();
         this._router = new Router(this.express);
     }
@@ -51,7 +58,7 @@ export class App{
         if(!this._initialized){
             this._initExpress();
         }
-        this._server = this.express.listen(this.opts.apiPort, this.opts.apiHost);
+        this._server = this.express.listen(this.opts.apiPort);
     }
 
     /**

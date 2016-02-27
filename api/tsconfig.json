@@ -3,7 +3,9 @@
         "module": "commonjs",
         "newLine": "LF",
         "outDir": "./dist",
-        "sourceMap": true
+        "sourceMap": true,
+        "target": "es6",
+        "experimentalDecorators": true
     },
     "filesGlob": [
         "**/*.ts",
@@ -13,15 +15,24 @@
     "compileOnSave": true,
     "buildOnSave": false,
     "atom": {
-        "rewriteTsconfig": true
+        "rewriteTsconfig": false
     },
     "files": [
         "lib/Api.ts",
-        "lib/controllers/TestCtrl.ts",
-        "lib/index.ts",
         "lib/Router.ts",
+        "lib/controllers/Controller.ts",
+        "lib/controllers/ControllerContext.ts",
+        "lib/controllers/IController.ts",
+        "lib/controllers/TestCtrl.ts",
+        "lib/decorators/ActionModel.ts",
+        "lib/decorators/ControllerModel.ts",
+        "lib/index.ts",
+        "lib/models/Action.ts",
+        "lib/models/IModel.ts",
+        "lib/routing/ActionInvoker.ts",
         "typings/express/express.d.ts",
         "typings/extend/extend.d.ts",
+        "typings/joi/joi.d.ts",
         "typings/mime/mime.d.ts",
         "typings/node/node.d.ts",
         "typings/serve-static/serve-static.d.ts",

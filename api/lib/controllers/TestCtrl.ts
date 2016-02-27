@@ -1,12 +1,15 @@
-export default class TestCtrl{
+import ControllerModel from '../decorators/ControllerModel';
+import ActionModel from '../decorators/ActionModel';
+import Action from '../models/Action';
+import Controller from './Controller';
+
+@ControllerModel(Action)
+export default class TestCtrl extends Controller{
 
     public static myStaticMethod(){
     }
-    constructor(){
 
-    }
-
-    public init(){
-        console.log('ueppaaaaa!');
+    @ActionModel(Action)
+    public get($model: Action): void {
     }
 }

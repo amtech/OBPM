@@ -5,9 +5,12 @@ export default class Router{
 
     }
 
+    /**
+     * Initializes all express request routes.
+     */
     initRoutes(){
         console.log('route init');
-        this.app.get('/', (req, res) => {
+        this.app.get('/', (req: express.Request, res: express.Response) => {
             console.log('route called');
             res.send('hello world!');
             res.end();

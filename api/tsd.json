@@ -19,6 +19,9 @@
     },
     "extend/extend.d.ts": {
       "commit": "7bce488d27f4262ce0899c9b652c911b26700d28"
+    },
+    "joi/joi.d.ts": {
+      "commit": "163a4277199c3d896d9efffe24ea84c85f55c8ac"
     }
   }
 }
