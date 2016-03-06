@@ -1,17 +1,36 @@
 import * as express from 'express';
 import ControllerContext from '../controllers/ControllerContext';
 import IController from '../controllers/IController';
+import * as q from 'q';
+import DependencyInjector from './DependencyInjector';
+import * as extend from 'extend';
+import httpErr from './HttpError';
+
+export interface IActionInvokerOptions{
+    rejectOnModelStateError?: boolean;
+    controllerTypes: Array<{new(): IController}>;
+}
+
+export interface IInvokeOptions{
+    actionName?: string;
+    controllerName?: string;
+}
 
 export default class ActionInvoker{
-    private _ctrlContext: ControllerContext;
-    private _ctrlType: Function;
-    private _ctrl: IController;
-    private _actionName: string;
-    private _action: Function;
+    private _opts: IActionInvokerOptions;
+    private _controllerTypes: any;
 
-    constructor(req: express.Request, res: express.Response){
-        this._ctrlContext = new ControllerContext(req, res);
-        this._actionName = this._ctrlContext.request.params['action'];
+    private static _defInvokerOptions: IActionInvokerOptions = {
+        rejectOnModelStateError: true,
+        controllerTypes: []
+    };
+
+    constructor(options?: IActionInvokerOptions){
+        this._opts = extend(true, {}, ActionInvoker._defInvokerOptions, (options || {}));
+        this._controllerTypes = {};
+        for(let t of this._opts.controllerTypes){
+            this._controllerTypes[t.name.toLowerCase()] = t;
+        }
     }
 
     /**
@@ -19,13 +38,8 @@ export default class ActionInvoker{
      * @returns {Function} the controller class function.
      * @private
      */
-    private _resolveControllerType(): Function{
-        if(typeof this._ctrlType === 'undefined'){
-            let ctrlName = this._ctrlContext.request.params['controller'];
-            this._ctrlType = require('../controllers/' + ctrlName);
-        }
-
-        return this._ctrlType;
+    private _resolveControllerType(ctrlName): Function{
+        return this._controllerTypes[ctrlName.toLowerCase() + 'controller'];
     }
 
     /**
@@ -33,25 +47,15 @@ export default class ActionInvoker{
      * @returns {IController}
      * @private
      */
-    private _resolveController(): IController{
-        if(typeof this._ctrl === 'undefined'){
-            let ctrlFn = this._resolveControllerType();
-            let ctrl = this._createCtrlInstance(ctrlFn);
-            ctrl.init(this._ctrlContext);
+    private _resolveController(controllerParam: string, context: ControllerContext): IController{
+        let ctrlFn = this._resolveControllerType(controllerParam);
+        if(ctrlFn){
+            let ctrl = this._createCtrlInstance(<{new(): IController}>ctrlFn);
+            ctrl.init(context);
+            return ctrl;
         }
 
-        return this._ctrl;
-    }
-
-    /**
-     * Resolves the action function of the current request.
-     * @param {Function} ctrlType The type of controller.
-     * @returns {Function}
-     * @private
-     */
-    private _resolveAction(ctrlType: Function): string{
-        // todo: Filter for functions.
-        return ctrlType.prototype[this._actionName];
+        return null;
     }
 
     /**
@@ -60,7 +64,72 @@ export default class ActionInvoker{
      * @returns {IController} a controller instance.
      * @private
      */
-    private _createCtrlInstance(ctrlFn: Function): IController{
-        return ctrlFn.prototype.constructor.call();
+    private _createCtrlInstance(ctrlFn: {new(): IController}): IController{
+        return new ctrlFn();
+    }
+
+    private processActionResult(result: any, d: q.Deferred<any>): void{
+        if(q.isPromise(result)){
+            let actionPromise: q.Promise<any> = result;
+            result.then(() => {
+                d.resolve.apply(d, Array.prototype.slice.call(arguments));
+            }, err => {
+                d.reject(err);
+            }).done();
+        }else{
+            if(result instanceof Error){
+                d.reject(result);
+            }else{
+                d.resolve(result);
+            }
+        }
+    }
+
+    private actionExists(ctrl: IController, actionName: string){
+        return ctrl && typeof ctrl[actionName] === 'function';
+    }
+
+    /**
+     * Invokes the responsible action for the current request.
+     *
+     * @returns {Promise<any>}
+     */
+    public invoke(req: express.Request, res: express.Response, options?: IInvokeOptions): q.Promise<any> {
+        let d = q.defer<any>(),
+            _opts = options || {},
+            _ctrlContext = new ControllerContext(req, res),
+            _actionName = req.params['action'] || _opts.actionName,
+            ctrl = this._resolveController(req.params['controller'] || _opts.controllerName, _ctrlContext);
+
+        if(!ctrl){
+            d.reject(httpErr.notFound('The specified controller could not be found.'));
+            return d.promise;
+        }
+
+        if(!this.actionExists(ctrl, _actionName)){
+            d.reject(httpErr.notFound('The specified action could not be found.'));
+            return d.promise;
+        }
+
+        let injector = new DependencyInjector(ctrl, _actionName),
+            actionResult: any;
+        // Get the action parameters:
+        injector.getParameterValues().then(params => {
+            if(this._opts.rejectOnModelStateError && !_ctrlContext.modelState.isValid()){
+                // Do not execute the action:
+                d.reject(httpErr.validation(_ctrlContext.modelState.errors));
+            }else{
+                try{
+                    actionResult = ctrl[_actionName].apply(ctrl, params);
+                    this.processActionResult(actionResult, d);
+                }catch(err){
+                    d.reject(httpErr.server(err));
+                }
+            }
+        }, err => {
+            d.reject(httpErr.server(err));
+        }).done();
+
+        return d.promise;
     }
 }

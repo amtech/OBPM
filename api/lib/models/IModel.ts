@@ -1,5 +1,7 @@
+import * as joi from 'joi';
+
 interface IModel{
-    getSchema(): void;
+    getSchema(): joi.ObjectSchema;
 }
 
 export default IModel;

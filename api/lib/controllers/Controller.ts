@@ -8,7 +8,11 @@ export default class Controller implements IController{
     /**
      * Current controller context instance.
      */
-    protected context: ControllerContext;
+    protected _context: ControllerContext;
+
+    public context(): ControllerContext{
+        return this._context;
+    }
 
     /**
      * Initializes the controller.
@@ -16,6 +20,6 @@ export default class Controller implements IController{
      * controller context.
      */
     init(context: ControllerContext): void{
-        this.context = context;
+        this._context = context;
     }
 }

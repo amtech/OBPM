@@ -2,10 +2,11 @@
     "compilerOptions": {
         "module": "commonjs",
         "newLine": "LF",
-        "outDir": "./dist",
+        "outDir": "dist",
         "sourceMap": true,
         "target": "es6",
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "watch": true
     },
     "filesGlob": [
         "**/*.ts",
@@ -14,9 +15,6 @@
     ],
     "compileOnSave": true,
     "buildOnSave": false,
-    "atom": {
-        "rewriteTsconfig": false
-    },
     "files": [
         "lib/Api.ts",
         "lib/Router.ts",
@@ -29,12 +27,22 @@
         "lib/index.ts",
         "lib/models/Action.ts",
         "lib/models/IModel.ts",
+        "lib/models/SubModel.ts",
         "lib/routing/ActionInvoker.ts",
+        "lib/routing/DependencyInjector.ts",
+        "lib/routing/HttpError.ts",
+        "lib/routing/ModelBinder.ts",
+        "lib/routing/ModelResolver.ts",
+        "lib/routing/ModelState.ts",
+        "lib/routing/Router.ts",
+        "test/ModelBinder.test.ts",
         "typings/express/express.d.ts",
         "typings/extend/extend.d.ts",
         "typings/joi/joi.d.ts",
         "typings/mime/mime.d.ts",
+        "typings/mocha/mocha.d.ts",
         "typings/node/node.d.ts",
+        "typings/q/Q.d.ts",
         "typings/serve-static/serve-static.d.ts",
         "typings/tsd.d.ts"
     ]

@@ -8,10 +8,19 @@ export default function ActionModel<T>(type: {new(): T}){
 }
 
 export class ModelAccessor<T>{
-    constructor(private type: {new(): T}){
+    protected _type: {new(): T};
+    constructor(type: {new(): T}){
+        this._type = type;
+    }
+
+    get type(): {new(): T}{
+        return this._type;
     }
 
     getInstance(): T{
         return new this.type();
     }
+}
+
+export class GenericModelAccessor extends ModelAccessor<any>{
 }

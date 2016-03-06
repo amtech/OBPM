@@ -4,12 +4,13 @@ import Action from '../models/Action';
 import Controller from './Controller';
 
 @ControllerModel(Action)
-export default class TestCtrl extends Controller{
+export default class TestController extends Controller{
 
     public static myStaticMethod(){
     }
 
     @ActionModel(Action)
-    public get($model: Action): void {
+    public get($model: Action) {
+        return 'hello world';
     }
 }

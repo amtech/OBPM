@@ -7,10 +7,11 @@ module.exports = function(grunt) {
         },
 
         watch: {
-            ts: {
+            dev: {
                 files: ['**/*.ts'],
-                tasks: ['ts']
+                tasks: ['ts:dev']
             }
+
         }
     });
 
