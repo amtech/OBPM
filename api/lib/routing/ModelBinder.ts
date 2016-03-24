@@ -1,6 +1,7 @@
 import * as joi from 'joi';
 import * as q from 'q';
 import ModelState from './ModelState';
+import 'reflect-metadata';
 
 /**
  * Binds provided data to an object instance.
@@ -19,17 +20,23 @@ export default class ModelBinder{
      * @returns {Promise<any>}
      */
     public bind(instance: any, data: any, modelState?: ModelState): q.Promise<ModelState>{
-        let d = q.defer<ModelState>(),
-            _ms = modelState || new ModelState();
-        this.validateObject(instance, data, _ms).then((dataObject) => {
-            return this.bindObject(instance, dataObject, _ms);
-        }).then(() => {
-            d.resolve(_ms);
-        }, err => {
-            d.reject(err);
-        }).done();
+        let objBinder = <ModelBinder>Reflect.getMetadata('binder', instance);
+        if(objBinder && objBinder !== this){
+            let binder = <ModelBinder>Reflect.getMetadata('binder', instance);
+            return binder.bind(instance, data);
+        }else{
+            let d = q.defer<ModelState>(),
+                _ms = modelState || new ModelState();
+            this.validateObject(instance, data, _ms).then((dataObject) => {
+                return this.bindObject(instance, dataObject, _ms);
+            }).then(() => {
+                d.resolve(_ms);
+            }, err => {
+                d.reject(err);
+            }).done();
 
-        return d.promise;
+            return d.promise;
+        }
     }
 
     /**
@@ -41,7 +48,7 @@ export default class ModelBinder{
      * @param data The data to validate.
      * @returns {Promise<any>}
      */
-    private validateObject(instance, data, modelState?: ModelState): q.Promise<any>{
+    protected validateObject(instance, data, modelState?: ModelState): q.Promise<any>{
         data = data || {};
         let d = q.defer<any>(),
             _ms = modelState || new ModelState();
@@ -60,30 +67,30 @@ export default class ModelBinder{
         return d.promise;
     }
 
-    private bindObject(instance, data, modelState?: ModelState): q.Promise<any>{
+    protected bindObject(instance, data, modelState?: ModelState): q.Promise<any>{
         let _ms = modelState || new ModelState(),
             bindingPromises = new Array<q.Promise<any>>();
-        for(let propName in instance){
-            if(instance.hasOwnProperty(propName)){
-                let prop = instance[propName];
-                if(typeof prop === 'object') {
-                    bindingPromises.push(this.bind(instance[propName], data[propName], _ms));
-                }else if(typeof prop === 'function'){
-                    continue;
-                }else{
-                    bindingPromises.push(this.bindProperty(instance, propName, data[propName]));
-                }
+        for(let propName of Object.getOwnPropertyNames(instance)){
+            let prop = instance[propName];
+            if(typeof prop === 'object') {
+                bindingPromises.push(this.bind(instance[propName], data[propName], _ms));
+            }else if(typeof prop !== 'function'){
+                bindingPromises.push(this.bindProperty(instance, propName, data[propName]));
             }
         }
 
         return q.all(bindingPromises);
     }
 
-    private bindProperty(instance: any, propName: string, value: any): q.Promise<any>{
-        let d = q.defer<any>();
-        instance[propName] = value;
-        d.resolve();
-
-        return d.promise;
+    protected bindProperty(instance: any, propName: string, value: any): q.Promise<any>{
+        let propBinder = <ModelBinder>Reflect.getMetadata('binder', instance, propName);
+        if(propBinder && propBinder !== this){
+            return propBinder.bindProperty(instance, propName, value);
+        }else{
+            let d = q.defer<any>();
+            instance[propName] = value;
+            d.resolve();
+            return d.promise;
+        }
     }
 }

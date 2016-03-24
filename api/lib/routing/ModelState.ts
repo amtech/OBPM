@@ -11,6 +11,10 @@ export default class ModelState{
         return this._errors;
     }
 
+    get isValid(): boolean{
+        return !this._errors.length;
+    }
+
     public add(path: string, message: string);
     public add(error: joi.ValidationErrorItem): void;
     public add(errors: joi.ValidationErrorItem[]): void;
@@ -34,9 +38,5 @@ export default class ModelState{
         for(let e of errors){
             this.add(e);
         }
-    }
-
-    public isValid(): boolean{
-        return !this._errors.length;
     }
 }

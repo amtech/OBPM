@@ -47,6 +47,8 @@ class DependencyInjector{
                 $model: this.inject$Model,
                 $req: this.inject$Req,
                 $res: this.inject$Res,
+                $id: this.inject$Id,
+                $query: this.inject$Params
             };
         }
 
@@ -84,9 +86,23 @@ class DependencyInjector{
         return d.promise;
     }
 
+    private inject$Params(): q.Promise<any>{
+        let d = q.defer<any>();
+        d.resolve(this.req.params);
+
+        return d.promise;
+    }
+
+    private inject$Id(): q.Promise<string>{
+        let d = q.defer<any>();
+        d.resolve(this.req.params['id']);
+
+        return d.promise;
+    }
+
     private inject$Null(): q.Promise<any>{
         let d = q.defer();
-        d.resolve();
+        d.resolve(null);
 
         return d.promise;
     }

@@ -28,6 +28,18 @@
     },
     "mocha/mocha.d.ts": {
       "commit": "b10e5ade29708bb0a7d21916a9fe289973520e89"
+    },
+    "chai/chai.d.ts": {
+      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+    },
+    "assertion-error/assertion-error.d.ts": {
+      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+    },
+    "chai-as-promised/chai-as-promised.d.ts": {
+      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+    },
+    "promises-a-plus/promises-a-plus.d.ts": {
+      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
     }
   }
 }

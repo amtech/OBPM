@@ -3,7 +3,9 @@ import * as joi from 'joi';
 enum HttpErrorCode{
     NOT_FOUND = 404,
     VALIDATION = 422,
-    SERVER = 500
+    SERVER = 500,
+    CLIENT = 400,
+    NOT_IMPLEMENTED = 501
 }
 
 export default class HttpError extends Error{
@@ -38,12 +40,31 @@ export default class HttpError extends Error{
         return new HttpValidationError(errors, message, baseErr);
     }
 
-    public static  server(baseErr?: Error, message?: string): HttpError{
-        return new HttpError(HttpErrorCode.SERVER, message, baseErr);
+    public static  server(): HttpError;
+    public static  server(baseErr: Error): HttpError;
+    public static  server(message: string): HttpError;
+    public static  server(param1?: Error | string, message?: string): HttpError{
+        let err: Error,
+            msg: string;
+        if(param1 instanceof Error){
+            err = param1;
+            msg = message;
+        } else if(typeof param1 === 'string'){
+            msg = param1;
+        }
+        return new HttpError(HttpErrorCode.SERVER, msg, err);
     }
 
-    public static notFound(message?: string){
+    public static notFound(message?: string): HttpError{
         return new HttpError(HttpErrorCode.NOT_FOUND, (message || 'The requested ressource could not be found.'));
+    }
+
+    public static execution(message?: string): HttpError{
+        return new HttpError(HttpErrorCode.CLIENT, (message || 'Invalid execution.'));
+    }
+
+    public static notImplemented(message?: string): HttpError{
+        return new HttpError(HttpErrorCode.NOT_IMPLEMENTED, (message || 'Function or method not implemented.'));
     }
 }
 
@@ -56,5 +77,14 @@ export class HttpValidationError extends HttpError{
     constructor(errors: joi.ValidationErrorItem[], message?: string, baseErr?: Error){
         super(HttpErrorCode.VALIDATION, (message || 'one or more validation errors occurred'), baseErr);
         this._errors = errors;
+    }
+
+    toString(): string{
+        let str = this.message + ':\n';
+        for(let err of this.errors){
+            str += `${err.path} (${err.type}): ${err.message}\n`;
+        }
+
+        return str;
     }
 }

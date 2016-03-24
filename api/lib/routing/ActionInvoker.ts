@@ -85,8 +85,27 @@ export default class ActionInvoker{
         }
     }
 
+    private _resolveControllerName(req: express.Request, options: IInvokeOptions): string{
+        return req.params['controller'] || options.controllerName;
+    }
+
     private actionExists(ctrl: IController, actionName: string){
         return ctrl && typeof ctrl[actionName] === 'function';
+    }
+
+    public _resolveActionName(req: express.Request, options: IInvokeOptions): string {
+        if (options.actionName) {
+            return options.actionName;
+        }
+        if (req.params['action']) {
+            return req.params['action'];
+        }
+        let method = req.method.toLowerCase();
+        if(method === 'get' && !req.params['id']){
+            return 'getAll';
+        }
+
+        return method;
     }
 
     /**
@@ -98,16 +117,17 @@ export default class ActionInvoker{
         let d = q.defer<any>(),
             _opts = options || {},
             _ctrlContext = new ControllerContext(req, res),
-            _actionName = req.params['action'] || _opts.actionName,
-            ctrl = this._resolveController(req.params['controller'] || _opts.controllerName, _ctrlContext);
+            _actionName = this._resolveActionName(req, options),
+            _controllerName = this._resolveControllerName(req, options),
+            ctrl = this._resolveController(_controllerName, _ctrlContext);
 
         if(!ctrl){
-            d.reject(httpErr.notFound('The specified controller could not be found.'));
+            d.reject(httpErr.notFound('The specified controller \'' + _controllerName + '\' could not be found.'));
             return d.promise;
         }
 
         if(!this.actionExists(ctrl, _actionName)){
-            d.reject(httpErr.notFound('The specified action could not be found.'));
+            d.reject(httpErr.notFound('The specified action \'' + _actionName + '\' could not be found.'));
             return d.promise;
         }
 
@@ -115,7 +135,7 @@ export default class ActionInvoker{
             actionResult: any;
         // Get the action parameters:
         injector.getParameterValues().then(params => {
-            if(this._opts.rejectOnModelStateError && !_ctrlContext.modelState.isValid()){
+            if(this._opts.rejectOnModelStateError && !_ctrlContext.modelState.isValid){
                 // Do not execute the action:
                 d.reject(httpErr.validation(_ctrlContext.modelState.errors));
             }else{
