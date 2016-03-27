@@ -12,13 +12,15 @@ let db = require('arangojs')(),
  */
 export class Database{
 
+    private _init: q.Promise<any>;
+
     /**
      * Creates a new database context.
      *
      * @constructor
      * @param {string} dbName The database name to connect to.
      */
-    constructor(public dbName: string){
+    constructor(protected dbName: string, protected processId: string){
     }
 
     /**
@@ -27,15 +29,14 @@ export class Database{
      * @returns {any}
      */
     public init(): q.Promise<any>{
-        return db.listDatabases()
-            .then(names => {
-                if(names.indexOf(this.dbName) < 0){
-                    return db.createDatabase(this.dbName);
-                }
-            })
-            .then(() => {
-                db.useDatabase(this.dbName);
-            });
+        if(!this._init){
+            let d = q.defer();
+            db.useDatabase(this.dbName);
+            this._init = d.promise;
+            d.resolve();
+        }
+
+        return this._init
     }
 
     /**
@@ -45,8 +46,25 @@ export class Database{
      * @param opts
      * @returns {any}
      */
-    public q(query, bindVars?, opts?): Promise<any>{
-        return db.query(aqlQuery(query), bindVars, opts);
+    public q(query, bindVars?, opts?): q.Promise<any>{
+        let d = q.defer<any>();
+        this.init().then(() => {
+            db.query(query, bindVars, opts).then(result => {
+                d.resolve(result);
+            }, err => {
+                d.reject(err);
+            });
+        }, err => {
+            d.reject(err);
+        });
+
+        return d.promise;
+    }
+
+    public single(query, bindVars?, opts?): q.Promise<any>{
+        return this.q(query, bindVars, opts).then(result => {
+            return result.next();
+        });
     }
 
     /**
@@ -57,34 +75,15 @@ export class Database{
      * @param {string} type Model type.
      * @param {string} id Model instance id.
      */
-    public getModel(type: string, id: string): q.Promise<IModel>{
-        let d = q.defer<IModel>(),
-            binder = new ModelBinder(),
-            modelType = <{new(): any}>require('./models/' + type);
-        if(!modelType){
-            d.reject(httpErr.server(`Could not retrieve model type ${type}`));
-            return d.promise;
-        }
-
-        let instance = new modelType();
-        this.q(`
+    public getModel(type: string, id: string): q.Promise<any>{
+        return this.single(`
                 for model in ${type}
-                filter model.id == ${id}
+                filter model._key == "${id}" && model.processId == "${this.processId}"
                 return model
-            `)
-            .then((modelData) => {
-                return binder.bind(instance, modelData);
-            })
-            .then((modelState: ModelState) => {
-                if(modelState.isValid){
-                    d.resolve(instance);
-                }else{
-                    d.reject(httpErr.validation(modelState.errors));
-                }
-            });
-
-        return d.promise;
+            `);
     }
 }
 
-export default new Database('obpm');
+export default function(processId: string, dbName?: string){
+    return new Database(dbName || 'obpm', processId);
+}

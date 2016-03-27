@@ -6,6 +6,7 @@ import * as express from 'express';
 import IController from '../controllers/IController';
 import ControllerContext from '../controllers/ControllerContext';
 import ModelState from './ModelState';
+import ModelValidator from './ModelValidator';
 
 class DependencyInjector{
 
@@ -15,6 +16,7 @@ class DependencyInjector{
     private action;
     private resolver: ModelResolver;
     private binder: ModelBinder;
+    private validator: ModelValidator;
     private _mapping: any;
     private req: express.Request;
     private res: express.Response;
@@ -25,6 +27,7 @@ class DependencyInjector{
         this.action = controller[actionName];
         this.resolver = new ModelResolver();
         this.binder = new ModelBinder();
+        this.validator = new ModelValidator();
         this.ctrlContext = controller.context();
         this.req = this.ctrlContext.request;
         this.res = this.ctrlContext.response;
@@ -48,7 +51,8 @@ class DependencyInjector{
                 $req: this.inject$Req,
                 $res: this.inject$Res,
                 $id: this.inject$Id,
-                $query: this.inject$Params
+                $params: this.inject$Params,
+                $query: this.inject$Query
             };
         }
 
@@ -59,15 +63,25 @@ class DependencyInjector{
         let d = q.defer<IModel>(),
             model = this.resolver.resolve(this.controller, this.actionName);
         if(!model){
-            d.reject(new Error('Cannot resolve model. No model type specified for invoked action.'));
+            d.resolve(this.req.body);
         }
 
-        this.binder.bind(model, this.req.body).then((modelState: ModelState) => {
-            this.ctrlContext.modelState.add(modelState.errors);
-            d.resolve(model);
-        }, (err) => {
-            d.reject(err);
-        });
+        let instance = model.getInstance();
+        if(model.bind){
+            this.binder.bind(model, this.req.body).then((modelState: ModelState) => {
+                this.ctrlContext.modelState.add(modelState.errors);
+                d.resolve(instance);
+            }, (err) => {
+                d.reject(err);
+            }).done();
+        }else if(typeof instance['getSchema'] === 'function'){
+            this.validator.validate(this.req.body, instance['getSchema']).then(result => {
+                if(!result.modelState.isValid){
+                    this.ctrlContext.modelState.add(result.modelState.errors);
+                }
+                d.resolve(result.value);
+            }).done();
+        }
 
         return d.promise;
     }
@@ -89,6 +103,13 @@ class DependencyInjector{
     private inject$Params(): q.Promise<any>{
         let d = q.defer<any>();
         d.resolve(this.req.params);
+
+        return d.promise;
+    }
+
+    private inject$Query(): q.Promise<any>{
+        let d = q.defer<any>();
+        d.resolve(this.req.query);
 
         return d.promise;
     }

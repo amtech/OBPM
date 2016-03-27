@@ -12,7 +12,7 @@ export interface IActionInvokerOptions{
 }
 
 export interface IInvokeOptions{
-    actionName?: string;
+    actionName?: string;r
     controllerName?: string;
 }
 

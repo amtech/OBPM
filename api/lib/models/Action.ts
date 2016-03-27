@@ -2,7 +2,7 @@ import IModel from './IModel';
 import * as joi from 'joi';
 import * as q from 'q';
 import httpErr from '../routing/HttpError';
-import ExecutionContext from './ExecutionContext';
+import ExecutionContext from '../viewmodels/ExecutionContext';
 import Document from './Document';
 import schema from './ModelSchema';
 import db from '../db';
@@ -55,15 +55,6 @@ export default class Action implements IModel{
     }
 
     /**
-     * Executes the action with the provided execution context.
-     * @param {ExecutionContext} context
-     * @returns {q.Promise<any>}
-     */
-    execute(context: ExecutionContext): q.Promise<any>{
-        return this.validateData(context.data);
-    }
-
-    /**
      * Maps the provived action data to the underlying document instance.
      * @param {any} data The action data to map.
      * @param {Document} doc The document to map to.
@@ -73,21 +64,12 @@ export default class Action implements IModel{
             propPath.set(doc.data, this.mapping[m], propPath.get(data, m));
         }
     }
-
-    /**
-     * Returns an action instance from the database.
-     * @param {string} id The database id of the action.
-     * @returns {Promise<Action>}
-     */
-    static get(id: string): q.Promise<Action>{
-        return <q.Promise<Action>>db.getModel('Action', id);
-    }
 }
 
 /**
  * Specialized Action type which execution creates a new document.
  */
-export class CreateAction extends Action{
+/*export class CreateAction extends Action{
 
     execute(context: ExecutionContext): q.Promise<any>{
         return super.execute(context).then((data) => {
@@ -98,4 +80,4 @@ export class CreateAction extends Action{
             this.mapData(data, doc);
         });
     }
-}
+}*/

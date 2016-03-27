@@ -2,7 +2,7 @@
   "name": "obpm-api",
   "version": "0.0.1",
   "description": "API service for OBPM.",
-  "main": "./dist/index.js",
+  "main": "./dist/lib/index.js",
   "dependencies": {
     "arangojs": "^4.3.0",
     "enjoi": "^1.0.2",
@@ -27,7 +27,7 @@
   },
   "scripts": {
     "test": "mocha dist/test/**/*.js",
-    "start": "node ./dist/index.js",
+    "start": "node ./dist/lib/index.js",
     "build": "tsc"
   },
   "repository": {

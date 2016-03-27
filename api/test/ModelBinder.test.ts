@@ -5,6 +5,7 @@ import httpErr from '../lib/routing/HttpError';
 import * as binding from '../lib/decorators/Binder';
 import ModelState from '../lib/routing/ModelState';
 import * as q from'q';
+import schema from '../lib/models/ModelSchema';
 
 import * as chai from 'chai';
 import * as chaiAsPromised from 'chai-as-promised';
@@ -29,7 +30,7 @@ class TestClass{
     }
 
     getSchema(): joi.ObjectSchema{
-        return joi.object().keys({
+        return schema(TestClass).keys({
             firstName: joi.string().required(),
             lastName: joi.string().required(),
             subProp: joi.object()
@@ -49,7 +50,7 @@ class TestSubClass{
     }
 
     getSchema(): joi.ObjectSchema{
-        return joi.object().keys({
+        return schema(TestSubClass).keys({
             street: joi.string().required(),
             zipCode: joi.number().required().min(1000).max(9999),
             city: joi.string().required()

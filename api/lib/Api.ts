@@ -31,7 +31,7 @@ export class App {
         dbHost: 'localhost',
         dbPort: 8529,
         apiHost: 'localhost',
-        apiPort: 8080
+        apiPort: 8090
     };
 
     /**

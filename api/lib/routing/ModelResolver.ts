@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import IController from '../controllers/IController';
 import {GenericModelAccessor} from '../decorators/ActionModel';
 import ModelBinder from './ModelBinder';
+import {ModelAccessor} from '../decorators/ActionModel';
 
 export default class ModelResolver{
 
@@ -13,12 +14,12 @@ export default class ModelResolver{
      * @param methodName The name of the action.
      * @returns {any} a new model instance.
      */
-    public resolve(controller: IController, actionName: string): any{
+    public resolve(controller: IController, actionName: string): ModelAccessor<any>{
         let modelType = <GenericModelAccessor>Reflect.getMetadata('modelType', controller, actionName);
         if(!modelType){
             return null;
         }
 
-        return modelType.getInstance();
+        return modelType;
     }
 }

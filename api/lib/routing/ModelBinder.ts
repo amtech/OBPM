@@ -2,6 +2,7 @@ import * as joi from 'joi';
 import * as q from 'q';
 import ModelState from './ModelState';
 import 'reflect-metadata';
+import ModelValidator from './ModelValidator';
 
 /**
  * Binds provided data to an object instance.
@@ -9,6 +10,12 @@ import 'reflect-metadata';
  * before the binding
  */
 export default class ModelBinder{
+
+    private _validator: ModelValidator;
+
+    constructor(){
+        this._validator = new ModelValidator();
+    }
 
     /**
      * Binds the provided data to the instance.
@@ -52,13 +59,10 @@ export default class ModelBinder{
         data = data || {};
         let d = q.defer<any>(),
             _ms = modelState || new ModelState();
-        if(typeof instance['getSchema'] === 'function') {
-            let schema = instance['getSchema']();
-            joi.validate(data, schema, {abortEarly: false}, (err, value) => {
-                if(err != null){
-                    _ms.add(err.details);
-                }
-                d.resolve(value);
+        if(instance['getSchema'] === 'function') {
+            this._validator.validate(data, instance['getSchema']).then((result) => {
+                _ms.add(result.modelState.errors);
+                d.resolve(result.value);
             });
         }else {
             d.resolve(data);

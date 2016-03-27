@@ -37,11 +37,12 @@ export default class Router{
 
         return function (req: express.Request, res: express.Response, next: express.NextFunction) {
             this._actionInvoker.invoke(req, res, {
-                controller: routeOpts.controller,
+                controllerName: routeOpts.controller,
                 actionName: routeOpts.actionName
             })
             .then(actionResult => {
-                res.status(200).end(actionResult);
+                res.status(200).send(actionResult);
+                res.end();
             }, err => {
                 if(err instanceof HttpError && (<HttpError>err).is404 && !this._options.rejectOn404){
                     next();
