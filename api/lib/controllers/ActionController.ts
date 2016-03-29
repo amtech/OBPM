@@ -4,6 +4,9 @@ import ExecutionContext from '../viewmodels/ExecutionContext';
 import ActionModel from '../decorators/ActionModel';
 import ActionRespository from '../repositories/ActionRespository';
 import * as q from 'q';
+import httpErr from '../routing/HttpError';
+import * as actionResult from '../routing/ActionResult';
+
 
 export default class ActionController extends RepositoryController<ActionRespository> {
 
@@ -12,7 +15,9 @@ export default class ActionController extends RepositoryController<ActionResposi
     }
 
     public byName($params, $query): q.Promise<any>{
-        return this.repo.findbyName($params['name'] || $query['name']);
+        return actionResult.res(
+            this.repo.findbyName($params['name'] || $query['name'])
+        );
     }
 
     /**

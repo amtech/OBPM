@@ -2,6 +2,7 @@ import * as extend from 'extend';
 import * as express from 'express';
 import * as http from 'http';
 import Router from './Router';
+import * as bodyParser from 'body-parser';
 
 export interface ApiOptions{
     apiHost?: string;
@@ -9,8 +10,6 @@ export interface ApiOptions{
     dbHost?: string;
     dbPort?: number;
 }
-
-
 
 /**
  * Base API wrapper class.
@@ -70,7 +69,7 @@ export class App {
     public stop(): void {
         this._server.close();
     }
-
+    
     /**
      * Initialized the express app behind this api.
      *
@@ -79,6 +78,8 @@ export class App {
     private _initExpress(): void{
         if(!this._initialized){
             this._initialized = true;
+
+            this.express.use(bodyParser.json());
             this._router.initRoutes();
         }
     }

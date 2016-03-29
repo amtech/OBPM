@@ -61,6 +61,10 @@ export class Database{
         return d.promise;
     }
 
+    public collection(name: string): any{
+        return db.collection(name);
+    }
+
     public single(query, bindVars?, opts?): q.Promise<any>{
         return this.q(query, bindVars, opts).then(result => {
             return result.next();

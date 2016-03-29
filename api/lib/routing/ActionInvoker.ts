@@ -122,12 +122,12 @@ export default class ActionInvoker{
             ctrl = this._resolveController(_controllerName, _ctrlContext);
 
         if(!ctrl){
-            d.reject(httpErr.notFound('The specified controller \'' + _controllerName + '\' could not be found.'));
+            d.reject(httpErr.routeNotFound('The specified controller \'' + _controllerName + '\' could not be found.'));
             return d.promise;
         }
 
         if(!this.actionExists(ctrl, _actionName)){
-            d.reject(httpErr.notFound('The specified action \'' + _actionName + '\' could not be found.'));
+            d.reject(httpErr.routeNotFound('The specified action \'' + _actionName + '\' could not be found.'));
             return d.promise;
         }
 

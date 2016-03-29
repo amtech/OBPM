@@ -44,7 +44,7 @@ export default class Router{
                 res.status(200).send(actionResult);
                 res.end();
             }, err => {
-                if(err instanceof HttpError && (<HttpError>err).is404 && !this._options.rejectOn404){
+                if(err instanceof HttpError && (<HttpError>err).isRouteNotFound && !this._options.rejectOn404){
                     next();
                 }else{
                     next(err);

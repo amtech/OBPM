@@ -5,6 +5,7 @@
   "main": "./dist/lib/index.js",
   "dependencies": {
     "arangojs": "^4.3.0",
+    "body-parser": "^1.15.0",
     "enjoi": "^1.0.2",
     "express": "^4.13.4",
     "extend": "^3.0.0",

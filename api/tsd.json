@@ -6,16 +6,16 @@
   "bundle": "typings/tsd.d.ts",
   "installed": {
     "node/node.d.ts": {
-      "commit": "95b7178e0ef33b4b88327676418b4cc3ad61df0f"
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
     },
     "express/express.d.ts": {
-      "commit": "95b7178e0ef33b4b88327676418b4cc3ad61df0f"
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
     },
     "serve-static/serve-static.d.ts": {
-      "commit": "95b7178e0ef33b4b88327676418b4cc3ad61df0f"
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
     },
     "mime/mime.d.ts": {
-      "commit": "95b7178e0ef33b4b88327676418b4cc3ad61df0f"
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
     },
     "extend/extend.d.ts": {
       "commit": "7bce488d27f4262ce0899c9b652c911b26700d28"
@@ -40,6 +40,12 @@
     },
     "promises-a-plus/promises-a-plus.d.ts": {
       "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+    },
+    "body-parser/body-parser.d.ts": {
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
+    },
+    "express-serve-static-core/express-serve-static-core.d.ts": {
+      "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
     }
   }
 }

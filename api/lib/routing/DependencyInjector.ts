@@ -60,6 +60,7 @@ class DependencyInjector{
     }
 
     private inject$Model(): q.Promise<IModel>{
+        if(!this.req.body) return this.inject$Null();
         let d = q.defer<IModel>(),
             model = this.resolver.resolve(this.controller, this.actionName);
         if(!model){
@@ -75,7 +76,7 @@ class DependencyInjector{
                 d.reject(err);
             }).done();
         }else if(typeof instance['getSchema'] === 'function'){
-            this.validator.validate(this.req.body, instance['getSchema']).then(result => {
+            this.validator.validate(this.req.body, instance['getSchema']()).then(result => {
                 if(!result.modelState.isValid){
                     this.ctrlContext.modelState.add(result.modelState.errors);
                 }

@@ -29,6 +29,9 @@ export default class HttpError extends Error{
     get is404(): boolean{
         return this._httpCode === HttpErrorCode.NOT_FOUND;
     }
+    get isRouteNotFound(): boolean{
+        return this instanceof HttpRouteNotFoundError;
+    }
     get isValidationError(): boolean{
         return this._httpCode === HttpErrorCode.VALIDATION;
     }
@@ -59,12 +62,22 @@ export default class HttpError extends Error{
         return new HttpError(HttpErrorCode.NOT_FOUND, (message || 'The requested ressource could not be found.'));
     }
 
+    public static routeNotFound(message?: string): HttpError{
+        return new HttpRouteNotFoundError(message);
+    }
+
     public static execution(message?: string): HttpError{
         return new HttpError(HttpErrorCode.CLIENT, (message || 'Invalid execution.'));
     }
 
     public static notImplemented(message?: string): HttpError{
         return new HttpError(HttpErrorCode.NOT_IMPLEMENTED, (message || 'Function or method not implemented.'));
+    }
+}
+
+export class HttpRouteNotFoundError extends HttpError{
+    constructor(message?: string){
+        super(HttpErrorCode.NOT_FOUND, message || 'Route not found.');
     }
 }
 
