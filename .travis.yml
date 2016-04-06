@@ -1,10 +1,18 @@
 language: node_js
 node_js:
   - "5.1"
+env:
+  - TEST_DIR=api
+before_install:
+  - pip install codecov
 before_script:
+  - cd $TEST_DIR
   - npm install
   - npm install -g tsd
   - npm install -g mocha
   - npm install -g typescript
   - tsd install
   - tsc
+script: cd $TEST_DIR && npm test
+after_success:
+  - codecov

@@ -97,7 +97,7 @@ export class Database{
      * @param {string} type Model type.
      * @param {string} id Model instance id.
      */
-    public getModel(type: string, id: string): q.Promise<any>{
+    public getModel(type: string, id: number): q.Promise<any>{
         return this.single(`
             for model in ${type}
             filter model._key == "${id}"
