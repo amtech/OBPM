@@ -51,7 +51,6 @@ export default class ActionInvoker{
         let ctrlFn = this._resolveControllerType(controllerParam);
         if(ctrlFn){
             let ctrl = this._createCtrlInstance(<{new(): IController}>ctrlFn);
-            ctrl.init(context);
             return ctrl;
         }
 
@@ -131,18 +130,22 @@ export default class ActionInvoker{
             return d.promise;
         }
 
-        let injector = new DependencyInjector(ctrl, _actionName),
+        let injector = new DependencyInjector(ctrl, _ctrlContext, _actionName),
             actionResult: any;
         // Get the action parameters:
         injector.getParameterValues().then(params => {
             if(this._opts.rejectOnModelStateError && !_ctrlContext.modelState.isValid){
                 // Do not execute the action:
                 d.reject(httpErr.validation(_ctrlContext.modelState.errors));
-            }else{
-                try{
-                    actionResult = ctrl[_actionName].apply(ctrl, params);
-                    this.processActionResult(actionResult, d);
-                }catch(err){
+            } else {
+                try {
+                    ctrl.init(_ctrlContext).then(() => {
+                        actionResult = ctrl[_actionName].apply(ctrl, params);
+                        this.processActionResult(actionResult, d);
+                    }, err => {
+                        d.reject(httpErr.server(err));
+                    });
+                } catch(err) {
                     d.reject(httpErr.server(err));
                 }
             }

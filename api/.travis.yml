@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - "5.1"
+before_script:
+  - npm install
+  - npm install -g tsd
+  - npm install -g mocha
+  - npm install -g typescript
+  - tsd install
+  - tsc

@@ -20,15 +20,13 @@ class DependencyInjector{
     private _mapping: any;
     private req: express.Request;
     private res: express.Response;
-    private ctrlContext: ControllerContext;
 
-    constructor(private controller: IController,
+    constructor(private controller: IController, private ctrlContext: ControllerContext,
                 private actionName: string){
         this.action = controller[actionName];
         this.resolver = new ModelResolver();
         this.binder = new ModelBinder();
         this.validator = new ModelValidator();
-        this.ctrlContext = controller.context();
         this.req = this.ctrlContext.request;
         this.res = this.ctrlContext.response;
     }

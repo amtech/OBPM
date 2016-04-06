@@ -49,7 +49,7 @@ export default class Router{
                 }else{
                     next(err);
                 }
-            });
+            }).done();
         }.bind(this);
     }
 }

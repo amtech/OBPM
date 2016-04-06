@@ -8,12 +8,14 @@ export class ExecutionContextDocument{
 }
 
 export default class ExecutionContext implements IModel{
-    actionId: string;
+    actionId: number;
+    caseId: number;
     documents: Array<ExecutionContextDocument>;
 
     getSchema(): joi.ObjectSchema{
         return joi.object({
             actionId: joi.number().required(),
+            caseId: joi.number().required(),
             documents: joi.object().pattern(/\w/, joi.object({
                     id: joi.string().optional(),
                     data: joi.object().optional()
