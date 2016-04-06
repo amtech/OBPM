@@ -4,7 +4,6 @@ node_js:
 env:
   - TEST_DIR=api
 before_install:
-  - pip install codecov
 before_script:
   - cd $TEST_DIR
   - npm install
@@ -15,4 +14,3 @@ before_script:
   - tsc
 script: cd $TEST_DIR && npm test
 after_success:
-  - codecov
