@@ -12,4 +12,8 @@ echo "---Installing local dependencies:"
 npm install
 tsd install
 
+echo "---compiling:"
 tsc
+
+echo "---running tests:"
+mocha
