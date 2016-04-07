@@ -30,10 +30,10 @@
       "commit": "b10e5ade29708bb0a7d21916a9fe289973520e89"
     },
     "chai/chai.d.ts": {
-      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+      "commit": "ec9eb4b28c74665a602c22db3457f0a76fa0fa23"
     },
     "assertion-error/assertion-error.d.ts": {
-      "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
+      "commit": "ec9eb4b28c74665a602c22db3457f0a76fa0fa23"
     },
     "chai-as-promised/chai-as-promised.d.ts": {
       "commit": "0cd5f0a1482dc3149f5446b1d885ef6ac7c57720"
@@ -46,6 +46,12 @@
     },
     "express-serve-static-core/express-serve-static-core.d.ts": {
       "commit": "80057d687aefa736511e434cd2a6c0e9a6bb02bc"
+    },
+    "sinon-chai/sinon-chai.d.ts": {
+      "commit": "ec9eb4b28c74665a602c22db3457f0a76fa0fa23"
+    },
+    "sinon/sinon.d.ts": {
+      "commit": "ec9eb4b28c74665a602c22db3457f0a76fa0fa23"
     }
   }
 }
