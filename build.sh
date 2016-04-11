@@ -1,19 +1,13 @@
 #!/usr/bin/env bash
+cd $(dirname $0)
 
-echo "---Installing global dependencies:"
+#include base functions:
+. build-base.sh
+
+printStep "installing global dependencies."
 npm install -g typescript
 npm install -g mocha
 npm install -g tsd
 
-cd api
-echo "---API: in"
-pwd
-echo "---Installing local dependencies:"
-npm install
-tsd install
-
-echo "---compiling:"
-tsc
-
-echo "---running tests:"
-mocha
+printStep "building API."
+./api/build.sh
