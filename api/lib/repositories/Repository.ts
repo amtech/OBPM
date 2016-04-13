@@ -12,7 +12,7 @@ export default class Repository {
     constructor(protected db: Database){
     }
 
-    public getModel(id: number, throwIfNotExisting?: boolean){
+    public getModel(id: string, throwIfNotExisting?: boolean){
         let pModel = this.db.getModel(this.modelType, id);
         return !throwIfNotExisting ? pModel : pModel.then(m => {
             if(m) return m;

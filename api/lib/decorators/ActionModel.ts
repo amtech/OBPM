@@ -19,11 +19,11 @@ export class ModelAccessor<T>{
         this._bind = bind;
     }
 
-    get type(): {new(): T}{
+    get type(): {new(): T} {
         return this._type;
     }
 
-    get bind(): boolean{
+    get bind(): boolean {
         return this._bind;
     }
 

@@ -3,26 +3,13 @@ import httpErr from './routing/HttpError';
 import IModel from './models/IModel';
 import ModelBinder from './routing/ModelBinder';
 import ModelState from './routing/ModelState';
+import toQ from './helpers/toq';
 
 let arango = require('arangojs'),
     aqlQuery = require('arangojs').aqlQuery;
 
 let _connections = {};
 let _collectionNames = ['Action', 'Document', ]
-
-/**
- * Converts a JS Promise to a Q Promise.
- */
-function toQ<T>(promise: Promise<T>): q.Promise<T> {
-    let d = q.defer<T>();
-    promise.then(result => {
-        d.resolve(result);
-    }, err => {
-        d.reject(err);
-    });
-
-    return d.promise;
-}
 
 /**
  * Provides basic functionality to access the database.
@@ -83,6 +70,14 @@ export class Database{
         return this.conn.collection(name);
     }
 
+    public edgeCollection(name: string): any{
+        return this.conn.edgeCollection(name);
+    }
+
+    public graph(name: string): any{
+        return this.conn.graph(name);
+    }
+
     public single(query, bindVars?, opts?): q.Promise<any>{
         return this.q(query, bindVars, opts).then(result => {
             return result.next();
@@ -97,12 +92,17 @@ export class Database{
      * @param {string} type Model type.
      * @param {string} id Model instance id.
      */
-    public getModel(type: string, id: number): q.Promise<any>{
+    public getModel(type: string, key: string): q.Promise<any>{
         return this.single(`
             for model in ${type}
-            filter model._key == "${id}"
+            filter model._key == "${key}"
             return model
         `);
+    }
+
+    public getModelById(id: string): q.Promise<any> {
+        let ids = id.split('/');
+        return this.getModel(ids[0], ids[1]);
     }
 }
 

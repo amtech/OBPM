@@ -21,6 +21,7 @@
     "files": [
         "lib/Api.ts",
         "lib/controllers/ActionController.ts",
+        "lib/controllers/CaseController.ts",
         "lib/controllers/Controller.ts",
         "lib/controllers/ControllerContext.ts",
         "lib/controllers/IController.ts",
@@ -29,6 +30,7 @@
         "lib/decorators/ActionModel.ts",
         "lib/decorators/Binder.ts",
         "lib/decorators/ControllerModel.ts",
+        "lib/helpers/toq.ts",
         "lib/index.ts",
         "lib/models/Action.ts",
         "lib/models/ActionDocument.ts",
@@ -64,6 +66,7 @@
         "typings/mime/mime.d.ts",
         "typings/mocha/mocha.d.ts",
         "typings/node/node.d.ts",
+        "typings/object-path/object-path.d.ts",
         "typings/promises-a-plus/promises-a-plus.d.ts",
         "typings/q/Q.d.ts",
         "typings/serve-static/serve-static.d.ts",

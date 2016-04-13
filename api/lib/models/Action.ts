@@ -13,6 +13,7 @@ export default class Action implements IModel{
     public _key: string;
     public roles: Array<string>;
     public documents: any;
+    public createsNewCase: boolean;
 
     /**
      * Returns the schema for an action model instance.
@@ -20,7 +21,8 @@ export default class Action implements IModel{
      */
     getSchema(): joi.ObjectSchema{
         return schema(Action).keys({
-            id: joi.string().optional()
+            name: joi.string(),
+            createsNewCase: joi.boolean()
         });
     }
 }

@@ -11,7 +11,6 @@ module.exports = function(grunt) {
                 files: ['**/*.ts'],
                 tasks: ['ts:dev']
             }
-
         }
     });
 

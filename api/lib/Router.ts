@@ -1,13 +1,14 @@
 import * as express from 'express';
 import Router from './routing/Router';
 import ActionController from './controllers/ActionController';
+import CaseController from './controllers/CaseController';
 import HttpError from './routing/HttpError';
 
 export default class RouterRegistrar{
     private _router: Router;
     constructor(public app: express.Express){
         this._router = new Router({
-            controllerTypes: [ActionController],
+            controllerTypes: [ActionController, CaseController],
             rejectOn404: true
         });
     }
