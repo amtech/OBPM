@@ -52,6 +52,9 @@
     },
     "sinon/sinon.d.ts": {
       "commit": "ec9eb4b28c74665a602c22db3457f0a76fa0fa23"
+    },
+    "object-path/object-path.d.ts": {
+      "commit": "641df27e73ca67fa7199a3deedae104198d41a17"
     }
   }
 }
