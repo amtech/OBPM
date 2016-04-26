@@ -69,7 +69,7 @@ export class App {
     public stop(): void {
         this._server.close();
     }
-    
+
     /**
      * Initialized the express app behind this api.
      *
@@ -80,6 +80,8 @@ export class App {
             this._initialized = true;
 
             this.express.use(bodyParser.json());
+            this.express.use(bodyParser.urlencoded({extended: true}));
+
             this._router.initRoutes();
         }
     }

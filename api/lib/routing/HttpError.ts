@@ -5,7 +5,8 @@ enum HttpErrorCode{
     VALIDATION = 422,
     SERVER = 500,
     CLIENT = 400,
-    NOT_IMPLEMENTED = 501
+    NOT_IMPLEMENTED = 501,
+    AUTH = 401
 }
 
 export default class HttpError extends Error{
@@ -72,6 +73,10 @@ export default class HttpError extends Error{
 
     public static notImplemented(message?: string): HttpError{
         return new HttpError(HttpErrorCode.NOT_IMPLEMENTED, (message || 'Function or method not implemented.'));
+    }
+
+    public static auth(message?: string): HttpError {
+        return new HttpError(HttpErrorCode.AUTH, (message || 'Authorization error.'));
     }
 }
 

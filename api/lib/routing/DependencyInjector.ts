@@ -7,6 +7,11 @@ import IController from '../controllers/IController';
 import ControllerContext from '../controllers/ControllerContext';
 import ModelState from './ModelState';
 import ModelValidator from './ModelValidator';
+import AuthRepository from '../repositories/AuthRepository';
+
+let getAuthRepo = (): q.Promise<AuthRepository> => {
+    return AuthRepository.getRepo();
+}
 
 class DependencyInjector{
 
@@ -50,7 +55,8 @@ class DependencyInjector{
                 $res: this.inject$Res,
                 $id: this.inject$Id,
                 $params: this.inject$Params,
-                $query: this.inject$Query
+                $query: this.inject$Query,
+                $user: this.inject$User
             };
         }
 
@@ -113,9 +119,32 @@ class DependencyInjector{
         return d.promise;
     }
 
+    private inject$User(): q.Promise<any>{
+        let d = q.defer<any>();
+        if (!this.req.user.id) {
+            d.reject(new Error('No authenticated user ID available.'));
+            return;
+        }
+        getAuthRepo().then(repo => {
+            repo.getCurrentUser(this.req)
+            .then(user => {
+                if (!user) {
+                    d.reject(new Error('Could not find user instance for current user ID.'));
+                    return;
+                }
+                d.resolve(user);
+            })
+            .catch(err => {
+                d.reject(err);
+            });
+        });
+
+        return d.promise;
+    }
+
     private inject$Id(): q.Promise<string>{
         let d = q.defer<any>();
-        d.resolve(this.req.params['id']);
+        d.resolve(this.req.params.id || this.req.query.id);
 
         return d.promise;
     }

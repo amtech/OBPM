@@ -5,6 +5,8 @@ import * as q from 'q';
 import DependencyInjector from './DependencyInjector';
 import * as extend from 'extend';
 import httpErr from './HttpError';
+import 'reflect-metadata';
+import AuthRepository from '../repositories/AuthRepository';
 
 export interface IActionInvokerOptions{
     rejectOnModelStateError?: boolean;
@@ -67,19 +69,14 @@ export default class ActionInvoker{
         return new ctrlFn();
     }
 
-    private processActionResult(result: any, d: q.Deferred<any>): void{
+    private processActionResult(result: any): q.Promise<any>{
         if(q.isPromise(result)){
-            let actionPromise: q.Promise<any> = result;
-            result.then(() => {
-                d.resolve.apply(d, Array.prototype.slice.call(arguments));
-            }, err => {
-                d.reject(err);
-            }).done();
+            return result;
         }else{
             if(result instanceof Error){
-                d.reject(result);
+                return q.fcall(() => { throw result });
             }else{
-                d.resolve(result);
+                return q.fcall(() => result);
             }
         }
     }
@@ -108,51 +105,73 @@ export default class ActionInvoker{
     }
 
     /**
+     * Checks if
+     *
+     * @method actionIsExecutable
+     *
+     * @param {string[]} groups [description]
+     *
+     * @returns {[type]} [description]
+     */
+    private actionIsExecutable(req, groups: string[]): q.Promise<boolean> {
+        return AuthRepository.getRepo()
+        .then(repo => repo.getCurrentUser(req))
+        .then(user => {
+            if(!groups) return true;
+            let roles = user && user.roles ? user.roles : [];
+            for(let g of groups) {
+                if (roles.indexOf(g) >= 0) {
+                    return true;
+                }
+            }
+            throw httpErr.auth('No permission for execution.');
+        })
+    }
+
+    private getActionParams(ctrl, ctrlContext, actionName): q.Promise<any[]> {
+        let injector = new DependencyInjector(ctrl, ctrlContext, actionName);
+        return injector.getParameterValues();
+    }
+
+    private initController(ctrl, ctrlContext): q.Promise<any> {
+        return ctrl.init(ctrlContext);
+    }
+
+    private invokeAction(ctrl, actionName, params): q.Promise<any> {
+        let actionResult = ctrl[actionName].apply(ctrl, params);
+        return this.processActionResult(actionResult);
+    }
+
+    /**
      * Invokes the responsible action for the current request.
      *
      * @returns {Promise<any>}
      */
     public invoke(req: express.Request, res: express.Response, options?: IInvokeOptions): q.Promise<any> {
-        let d = q.defer<any>(),
-            _opts = options || {},
+        let _opts = options || {},
             _ctrlContext = new ControllerContext(req, res),
             _actionName = this._resolveActionName(req, options),
             _controllerName = this._resolveControllerName(req, options),
             ctrl = this._resolveController(_controllerName, _ctrlContext);
 
-        if(!ctrl){
-            d.reject(httpErr.routeNotFound('The specified controller \'' + _controllerName + '\' could not be found.'));
-            return d.promise;
-        }
+        if(!ctrl)
+            throw httpErr.routeNotFound('The specified controller \'' + _controllerName + '\' could not be found.');
 
-        if(!this.actionExists(ctrl, _actionName)){
-            d.reject(httpErr.routeNotFound('The specified action \'' + _actionName + '\' could not be found.'));
-            return d.promise;
-        }
+        if(!this.actionExists(ctrl, _actionName))
+            throw httpErr.routeNotFound('The specified action \'' + _actionName + '\' could not be found.');
 
-        let injector = new DependencyInjector(ctrl, _ctrlContext, _actionName),
-            actionResult: any;
-        // Get the action parameters:
-        injector.getParameterValues().then(params => {
+        let auth = Reflect.getMetadata('authorization', ctrl, _actionName);
+
+        return this.actionIsExecutable(req, auth)
+        .then(() => this.initController(ctrl, _ctrlContext))
+        .then(() => this.getActionParams(ctrl, _ctrlContext, _actionName))
+        .then(params => {
             if(this._opts.rejectOnModelStateError && !_ctrlContext.modelState.isValid){
                 // Do not execute the action:
-                d.reject(httpErr.validation(_ctrlContext.modelState.errors));
+                throw httpErr.validation(_ctrlContext.modelState.errors);
             } else {
-                try {
-                    ctrl.init(_ctrlContext).then(() => {
-                        actionResult = ctrl[_actionName].apply(ctrl, params);
-                        this.processActionResult(actionResult, d);
-                    }, err => {
-                        d.reject(httpErr.server(err));
-                    });
-                } catch(err) {
-                    d.reject(httpErr.server(err));
-                }
+                return this.invokeAction(ctrl, _actionName, params);
             }
-        }, err => {
-            d.reject(httpErr.server(err));
-        }).done();
-
-        return d.promise;
+        });
     }
 }

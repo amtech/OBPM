@@ -6,7 +6,7 @@ let enjoi = require('enjoi');
 import * as joi from 'joi';
 import httpErr from '../routing/HttpError';
 import * as extend from 'extend';
-import CaseRepository from './CaseRepository';
+import CaseRepository, {ObjectTree} from './CaseRepository';
 import toQ from '../helpers/toq';
 import * as objectPath from 'object-path';
 
@@ -19,24 +19,53 @@ export default class ActionExecutor{
     private caseRepo: CaseRepository;
     private internalActions: InternalActions;
     private isExecuted: boolean;
-    private caseInstance: any;
+    private caseInstance: ObjectTree;
     private newEdges: any;
 
     constructor(
         private context: ExecutionContext,
         private action: Action,
+        private user,
         private db: Database){
         this.caseRepo = new CaseRepository(this.db);
         this.internalActions = new InternalActions(this.db, this.context);
+        this.newEdges = [];
+    }
+
+    private isExecutableByUser(caseInstance: ObjectTree): boolean {
+        let uRoles = this.user.roles;
+        if (!uRoles || !uRoles.length) return false;
+        let resolved = this.action.roles.map(r => {
+            return caseInstance.resolveVar(r);
+        })
+        // check user:
+        if (resolved.indexOf(this.user.userName)) {
+            return true;
+        }
+
+        // check roles:
+        for (let aRole of resolved) {
+            if (aRole && uRoles.indexOf(aRole) >= 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     execute(): q.Promise<any>{
         if(this.isExecuted) throw httpErr.server('ActionExecuter already executed.');
         this.isExecuted = true;
+
         return this.getCaseKey()
         .then(key => this.caseRepo.getCaseTree(key))
         .then(c => {
-            this.caseInstance = c;
+            if(c) {this.caseInstance = c };
+
+            if(!this.isExecutableByUser(this.caseInstance)) {
+                throw httpErr.execution('Not permitted to execute this action.');
+            }
+
             return q.all(Object.getOwnPropertyNames(this.action.documents).map(d => {
                 return this.mapData(d);
             }));
@@ -44,7 +73,8 @@ export default class ActionExecutor{
         .then(docs => {
             let col = this.db.collection('Document');
             return q.all(docs.map((doc => {
-                return doc._key ? col.replace(doc._key, doc) : col.save(doc).then(res => {
+                let dbDoc = this.stripDocument(doc);
+                return dbDoc._key ? col.replace(dbDoc._key, dbDoc) : col.save(dbDoc).then(res => {
                     doc._id = res._id;
                 });
             })));
@@ -57,6 +87,26 @@ export default class ActionExecutor{
                 return edgeCol.save(ed.data, ed.from._id, ed.to._id);
             }));
         });
+    }
+
+    /**
+     * Returns a new document obejct only containing valid attributes.
+     *
+     * @method stripDocument
+     *
+     * @param {any} doc The original document to strip down.
+     *
+     * @returns {any} New document instance.
+     */
+    private stripDocument(doc: any): any {
+        return {
+            _id: doc._id,
+            _key: doc._key,
+            _rev: doc._rev,
+            state: doc.state,
+            data: doc.data,
+            type: doc.type
+        };
     }
 
     /**
@@ -73,9 +123,21 @@ export default class ActionExecutor{
             }
             throw httpErr.execution('This execution requires a valid case ID.');
         }
-        return this.internalActions.createCase().then(c => c._key);
+        return this.internalActions.createCase().then(c => {
+            this.caseInstance = c;
+            return c.root._key;
+        });
     }
 
+    /**
+     * Validates and maps incoming data to a document attached by the given name.
+     *
+     * @method mapData
+     *
+     * @param {string} name The name under which the document is attached to the action.
+     *
+     * @returns {q.Promise<any>}
+     */
     mapData(name: string): q.Promise<any>{
         return this.getDocInfo(name).then(docInfo => {
             let execData = docInfo.contextDoc.data,
@@ -99,6 +161,16 @@ export default class ActionExecutor{
         });
     }
 
+    /**
+     * Validates the context and returns a promise resolving an object containing
+     * the execution context doc, action definition doc and the database document.
+     *
+     * @method getDocInfo
+     *
+     * @param {string} name The name under which the document is attached to the action.
+     *
+     * @returns {q.Promise<any>}
+     */
     getDocInfo(name: string): q.Promise<any>{
         let contextDoc = this.context.documents[name],
             actionDef = this.action.documents[name];
@@ -132,31 +204,34 @@ export default class ActionExecutor{
      */
     getDocument(actionDef: any, contextDoc: any): q.Promise<any>{
         let key = contextDoc.id,
-            type = actionDef.type,
-            state = actionDef.state;
+            type = actionDef.type;
         if (key) {
-            return q.fcall(() => this.caseInstance.__documents['Document/' + key]);
+            return q.fcall(() => {
+                let eDoc = this.caseInstance.documents['Document/' + key];
+                if(eDoc.type === type && eDoc.state === actionDef.state) return eDoc;
+                return;
+            });
         } else {
-            return this.caseRepo.getModelTree().then(root => {
-                let model = <any>objectPath.get(root, actionDef.path);
+            return this.caseRepo.getModelTree().then(tree => {
+                let model = tree.getValue(actionDef.path);
 
                 if (!model) throw httpErr.execution('Invalid document path definied in Action.');
-                if(model.type !== type) httpErr.execution('Invalid document type definied in Action.');
+                if(model.type !== type) throw httpErr.execution('Invalid document type definied in Action.');
 
-                let siblings = objectPath.get(this.caseInstance, actionDef.path),
-                    sArr = <any[]>(siblings instanceof Array ? siblings : [siblings]);
+                let siblings = this.caseInstance.getValue(actionDef.path),
+                    sArr = siblings instanceof Array ? siblings : siblings ? [siblings] : [];
 
                 if(model.__max && model.__max <= sArr.length) {
-                    httpErr.execution('Already maximum documents of this type attached to parent.');
+                    throw httpErr.execution('Already maximum documents of this type attached to parent.');
                 }
 
                 let paths = actionDef.path.split('.');
                 let parentPath = paths.slice(0, -1).join('.');
-                let parent = parentPath.length ? objectPath.get(this.caseInstance) :
-                    this.caseInstance;
+                let parent = parentPath.length ? this.caseInstance.getValue(parentPath) :
+                    this.caseInstance.root;
                 if (!parent) throw httpErr.execution('Invalid document path definied in Action.');
 
-                let newDoc = {type, data: {}};
+                let newDoc = { type, data: {} };
                 this.newEdges.push({
                     from: parent,
                     to: newDoc,
@@ -166,6 +241,8 @@ export default class ActionExecutor{
                         min: model.__min
                     }
                 });
+
+                return newDoc;
             });
         }
     }
@@ -185,6 +262,9 @@ export class InternalActions {
              type: 'Case',
              state: 'created',
              data: {}
-         }));
+         })).then(newCase => {
+             newCase['__documents'] = {};
+             return new ObjectTree(newCase);
+         });
     }
 }

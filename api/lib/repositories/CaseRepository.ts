@@ -1,6 +1,7 @@
 import Repository from './Repository';
 import db, {Database} from '../db';
 import * as q from 'q';
+import * as objectPath from 'object-path';
 
 export default class CaseRespository extends Repository {
 
@@ -12,22 +13,22 @@ export default class CaseRespository extends Repository {
         super(db);
     }
 
-    getCaseTree(caseKey: string): q.Promise<any> {
+    getCaseTree(caseKey: string): q.Promise<ObjectTree> {
         return this.getTree('documents', 'Document/' + caseKey);
     }
 
-    getModelTree(): q.Promise<any> {
+    getModelTree(): q.Promise<ObjectTree> {
         return this.db.single(`
             for dt in DocumentType
             filter dt.type == 'Case'
-            return td
+            return dt
         `)
         .then(rootType => {
             return this.getTree('documentTypes', rootType._id);
         });
     }
 
-    private getTree(colName: string, docId: string): q.Promise<any> {
+    private getTree(graph: string, docId: string): q.Promise<ObjectTree> {
         let documents = {},
             caseDocument,
             getDoc = (id: string): q.Promise<any> => {
@@ -38,8 +39,8 @@ export default class CaseRespository extends Repository {
                 );
             }
         return this.db.q(`
-            FOR e IN GRAPH_EDGES('${colName}', '${docId}', {
-                direction: 'outbound', includeData: true
+            FOR e IN GRAPH_EDGES('${graph}', '${docId}', {
+                direction: 'outbound', includeData: true, maxDepth: 0
             })
             return e
         `)
@@ -55,7 +56,7 @@ export default class CaseRespository extends Repository {
             });
             return q.all(promises).then(() => {
                 for(let edge of result._result) {
-                    if(edge.max === void 0 || edge.max > 1 && colName === 'document') {
+                    if((edge.max === void 0 || edge.max > 1) && graph === 'documents') {
                         edge._from[edge.property] = edge._from[edge.property] || [];
                         edge._from[edge.property].push(edge._to);
                     } else {
@@ -71,22 +72,31 @@ export default class CaseRespository extends Repository {
                         break;
                     }
                 }
-                caseDocument.__documents = documents;
-
-                return caseDocument;
+                if (caseDocument) {
+                    caseDocument.__documents = documents;
+                    return new ObjectTree(caseDocument);
+                }
             });
         });
     }
+}
 
-    /*getDocuments(caseKey: number, filters: any): q.Promise<any>{
-        return this.db.q(`
-            for v in graph_traversal(
-                'documents', 'Document/${caseKey}', 'outbound',
-                $
-            )
-            FOR v, e, p IN 1 OUTBOUND 'Case/${caseKey}' GRAPH 'Documents'
-            FILTER vertex._key IN [${docKeys}]
-            RETURN vertex
-        `);
-    }*/
+export class ObjectTree {
+    constructor(public root) {}
+
+    public get documents (): any {
+        return this.root.__documents;
+    }
+
+    public getValue(path: string): any {
+        return <any>objectPath.get(this.root, path);
+    }
+
+    public resolveVar(path: string): any {
+        if (path.substring(0, 1) === '%') {
+            return this.getValue(path.substring(1));
+        }
+
+        return path;
+    }
 }

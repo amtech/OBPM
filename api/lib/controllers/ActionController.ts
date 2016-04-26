@@ -2,6 +2,7 @@
 import RepositoryController from './RepositoryController';
 import ExecutionContext from '../viewmodels/ExecutionContext';
 import ActionModel from '../decorators/ActionModel';
+import ActionAuth from '../decorators/ActionAuthorization';
 import ActionRespository from '../repositories/ActionRespository';
 import * as q from 'q';
 import httpErr from '../routing/HttpError';
@@ -28,7 +29,12 @@ export default class ActionController extends RepositoryController<ActionResposi
      * @param {ExecutionContext} $model
      */
     @ActionModel(ExecutionContext, false)
-    public execute($model: ExecutionContext): q.Promise<any> {
-        return this.repo.executeAction($model);
+    public execute($model: ExecutionContext, $user): q.Promise<any> {
+        return this.repo.executeAction($model, $user);
+    }
+
+    @ActionAuth(['admin'])
+    public executables($user): q.Promise<any> {
+        return this.repo.getExecutableActions($user);
     }
 }

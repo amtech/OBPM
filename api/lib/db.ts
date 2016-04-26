@@ -7,9 +7,23 @@ import toQ from './helpers/toq';
 
 let arango = require('arangojs'),
     aqlQuery = require('arangojs').aqlQuery;
-
+/**
+ * global collection of cached connections per database name.
+ *
+ * @type {Object}
+ */
 let _connections = {};
-let _collectionNames = ['Action', 'Document', ]
+
+/**
+ * Object containing names of default collections per database names
+ * wich should be created if they do not exist yet.
+ *
+ * @type {Object}
+ */
+let _defCollections = {
+    default: ['Action', 'Document'],
+    obpm_users: ['User', 'Client']
+};
 
 /**
  * Provides basic functionality to access the database.
@@ -49,8 +63,17 @@ export class Database{
         });
     }
 
+    /**
+     * Creates all default collections and resolved the promise as soon as
+     * all collections are created.
+     *
+     * @method prepareCollections
+     *
+     * @returns {q.Promise<any>}
+     */
     private prepareCollections(): q.Promise<any>{
-        return q.all(_collectionNames.map(c => {
+        let cols = _defCollections[this.dbName] || _defCollections.default;
+        return q.all(cols.map(c => {
             return toQ(this.conn.collection(c).create());
         })).then(() => this);
     }
@@ -78,9 +101,18 @@ export class Database{
         return this.conn.graph(name);
     }
 
-    public single(query, bindVars?, opts?): q.Promise<any>{
-        return this.q(query, bindVars, opts).then(result => {
-            return result.next();
+    public single(query, throwIfNull?: boolean): q.Promise<any>{
+        return this.q(query).then(result => {
+            if(throwIfNull === true && !result.hasNext()) {
+                throw new Error('Could not find a single resource.');
+            }
+            return toQ(result.next());
+        });
+    }
+
+    public all(query: string): q.Promise<any> {
+        return this.q(query).then(result => {
+            return toQ(result.all());
         });
     }
 
