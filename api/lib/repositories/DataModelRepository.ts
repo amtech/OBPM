@@ -25,7 +25,32 @@ export default class DataModelRespository extends Repository {
         if(doc.type !== 'Case' && !doc.parent) {
             throw httpErr.validation([], 'Only Case document is allowed to have no parent.');
         }
-        doc.type !== 'Case' ? q.fcall(() => null) : this.q.
+        return (doc.type !== 'Case' ? q.fcall(() => null) : this.db.single(`
+            for caseDoc in DocumentType
+            filter caseDoc.type == 'Case'
+            return caseDoc
+        `))
+        .then(caseDoc => {
+            if(caseDoc) {
+                throw httpErr.execution('Only one document of type Case is allowed.');
+            }
+            return this.db.collection('DocumentType').save({type: doc.type})
+        })
+        .then(newDoc => {
+            if(doc.type === 'Case') return newDoc;
+
+            return this.db.getModel('DocumentType', doc.parent)
+            .then(parent => {
+                if(!parent) {
+                    throw httpErr.validation([], 'Invalid parent ID provided.');
+                }
+                return toQ(this.db.edgeCollection('hasModel').save({
+                    max: doc.max,
+                    fromId: parent._id,
+                    toId: newDoc._id
+                }));
+            });
+        });
     }
 
     private static _cachedRepo: q.Promise<DataModelRespository>;
