@@ -6,7 +6,7 @@ enum HttpErrorCode{
     SERVER = 500,
     CLIENT = 400,
     NOT_IMPLEMENTED = 501,
-    AUTH = 401
+    AUTH = 403
 }
 
 export default class HttpError extends Error{

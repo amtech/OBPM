@@ -1,13 +1,5 @@
 import IModel from './IModel';
 import * as joi from 'joi';
-import * as q from 'q';
-import httpErr from '../routing/HttpError';
-import ExecutionContext from '../viewmodels/ExecutionContext';
-import Document from './Document';
-import schema from './ModelSchema';
-import db from '../db';
-let enjoi = require('enjoi');
-let propPath = require('property-path');
 
 export default class Action implements IModel{
     public _key: string;
@@ -20,9 +12,9 @@ export default class Action implements IModel{
      * @returns {ObjectSchema}
      */
     getSchema(): joi.ObjectSchema{
-        return schema(Action).keys({
-            name: joi.string(),
-            createsNewCase: joi.boolean()
+        return joi.object({
+            name: joi.string().required(),
+            createsNewCase: joi.boolean().required()
         });
     }
 }
