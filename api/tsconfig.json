@@ -21,10 +21,11 @@
     "files": [
         "lib/Api.ts",
         "lib/controllers/ActionController.ts",
-        "lib/controllers/CaseController.ts",
         "lib/controllers/Controller.ts",
         "lib/controllers/ControllerContext.ts",
         "lib/controllers/DataModelController.ts",
+        "lib/controllers/DocumentController.ts",
+        "lib/controllers/EnvironmentController.ts",
         "lib/controllers/IController.ts",
         "lib/controllers/RepositoryController.ts",
         "lib/controllers/UserController.ts",
@@ -50,6 +51,9 @@
         "lib/repositories/AuthRepository.ts",
         "lib/repositories/CaseRepository.ts",
         "lib/repositories/DataModelRepository.ts",
+        "lib/repositories/DocumentRepository.ts",
+        "lib/repositories/EnvironmentRepository.ts",
+        "lib/repositories/RecordRepository.ts",
         "lib/repositories/Repository.ts",
         "lib/Router.ts",
         "lib/routing/ActionInvoker.ts",
@@ -64,6 +68,8 @@
         "lib/viewmodels/ExecutionContext.ts",
         "lib/viewmodels/ModelDocument.ts",
         "lib/viewmodels/NewUser.ts",
+        "lib/viewmodels/UpdateUser.ts",
+        "test/e2e/create-model.ts",
         "test/ModelBinder.test.ts",
         "typings/assertion-error/assertion-error.d.ts",
         "typings/body-parser/body-parser.d.ts",
@@ -82,6 +88,8 @@
         "typings/serve-static/serve-static.d.ts",
         "typings/sinon-chai/sinon-chai.d.ts",
         "typings/sinon/sinon.d.ts",
+        "typings/superagent/superagent.d.ts",
+        "typings/supertest/supertest.d.ts",
         "typings/tsd.d.ts"
     ]
 }

@@ -14,7 +14,16 @@ export default class Action implements IModel{
     getSchema(): joi.ObjectSchema{
         return joi.object({
             name: joi.string().required(),
-            createsNewCase: joi.boolean().required()
+            createsNewCase: joi.boolean().optional(),
+            roles: joi.array().items(joi.string()).required(),
+            documents: joi.object().required().unknown(true)
+            .pattern(/\w\d/, joi.object({
+                type: joi.string().required(),
+                path: joi.string(),
+                endState: joi.string().required(),
+                schema: joi.object().optional(),
+                state: joi.string()
+            }).xor('path', 'state'))
         });
     }
 }

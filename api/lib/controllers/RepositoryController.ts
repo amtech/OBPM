@@ -8,13 +8,13 @@ import db, {Database} from '../db';
 import CtrlAuth from '../decorators/ControllerAuthorization';
 
 @CtrlAuth(['admin'])
-export default class RepositoryController<T extends Repository, M extends IModel> extends Controller{
+export default class RepositoryController<T extends Repository> extends Controller{
     protected repo: T;
     protected repoType: new(database: Database) => T;
-    protected modelType: new() => M;
     protected db: Database;
+    protected modelType: {new(): IModel};
 
-    constructor(repoType: {new(database: Database): T}, modelType: {new(): M}){
+    constructor(repoType: {new(database: Database): T}, modelType?: {new(): IModel}){
         super();
         this.repoType = repoType;
         this.modelType = modelType;
@@ -28,12 +28,20 @@ export default class RepositoryController<T extends Repository, M extends IModel
         });
     }
 
+    public getAll(): q.Promise<any> {
+        return this.repo.getAllModels();
+    }
+
     public get($id){
         return this.repo.getModel($id);
     }
 
     public put($id, $model) {
         return this.repo.updateModel($id, $model);
+    }
+
+    public patch($id, $model): q.Promise<any> {
+        return this.repo.patchModel($id, $model);
     }
 
     public post($model): q.Promise<any> {

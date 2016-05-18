@@ -1,49 +1,39 @@
-import Controller from './Controller';
+import RepositoryController from './RepositoryController';
 import ActionModel from '../decorators/ActionModel';
 import ActionAuth from '../decorators/ActionAuthorization';
 import CtrlAuth from '../decorators/ControllerAuthorization';
-import DataModelRespository from '../repositories/DataModelRepository';
+import DataModelRepository from '../repositories/DataModelRepository';
+import CaseRepository from '../repositories/CaseRepository';
 import ControllerContext from './ControllerContext';
 import * as q from 'q';
 import httpErr from '../routing/HttpError';
 import * as actionResult from '../routing/ActionResult';
+import ModelDocument from '../viewmodels/ModelDocument';
 
 @CtrlAuth(['modeler'])
-export default class DataModelController extends Controller {
+export default class DataModelController extends RepositoryController<DataModelRepository> {
 
-    protected repo: DataModelRespository;
+    private caseRepo: CaseRepository;
 
     constructor(){
-        super();
+        super(DataModelRepository, ModelDocument);
     }
 
     public init(context: ControllerContext): q.Promise<any>{
         return super.init(context).then(() => {
-            return DataModelRespository.getRepo(context.request.params['tid'])
-            .then(repo => {
-                this.repo = repo;
-            });
+            this.caseRepo = new CaseRepository(this.repo.DB);
         });
     }
 
-    /*@ActionAuth([])
-    public executables($user): q.Promise<any> {
-        return this.repo.getExecutableActions($user);
+    public post($model: ModelDocument): q.Promise<any> {
+        return this.repo.createType($model);
     }
 
-    public get($id): q.Promise<any> {
-        return super.get($id);
+    public tree(): q.Promise<any> {
+        return this.caseRepo.getModelTree()
+        .then(tree => {
+            delete tree.root.__documents;
+            return tree;
+        })
     }
-
-    public put($id, $model) {
-        return super.put($id, $model);
-    }
-
-    public post($model): q.Promise<any> {
-        return super.post($model);
-    }
-
-    public delete($id): q.Promise<any> {
-        return super.delete($id);
-    }*/
 }

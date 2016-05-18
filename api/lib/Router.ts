@@ -2,8 +2,10 @@ import * as express from 'express';
 import Router from './routing/Router';
 
 import ActionController from './controllers/ActionController';
-import CaseController from './controllers/CaseController';
+import DocumentController from './controllers/DocumentController';
 import UserController from './controllers/UserController';
+import DataModelController from './controllers/DataModelController';
+import EnvironmentController from './controllers/EnvironmentController';
 import authModel from './helpers/auth-model';
 
 import HttpError from './routing/HttpError';
@@ -15,8 +17,10 @@ export default class RouterRegistrar{
         this._router = new Router({
             controllerTypes: [
                 ActionController,
-                CaseController,
-                UserController
+                DocumentController,
+                UserController,
+                DataModelController,
+                EnvironmentController
             ],
             rejectOn404: true
         });
@@ -45,7 +49,10 @@ export default class RouterRegistrar{
         this.app.all('/oauth/token', this.oauth.grant());
         this.app.use(this.oauth.authorise());
 
-        // generic MVC/REST
+        // specific REST routes
+        this.app.use('/:tid$', this._router.handle({ controller: 'environment' }));
+
+        // generic REST routes
         this.app.use('/:tid/:controller/:id(\\d+)', this._router.handle());
         this.app.use('/:tid/:controller/:action', this._router.handle());
         this.app.use('/:tid/:controller$', this._router.handle());

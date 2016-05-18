@@ -66,13 +66,18 @@ class DependencyInjector{
     private inject$Model(): q.Promise<IModel>{
         if(!this.req.body) return this.inject$Null();
         let d = q.defer<IModel>(),
-            model = this.resolver.resolve(this.controller, this.actionName);
-        if(!model){
+            model = this.resolver.resolve(this.controller, this.actionName),
+            instance;
+        if (model) {
+            instance = model.getInstance();
+        } else if (typeof this.controller['modelType'] === 'function') {
+            instance = new this.controller['modelType']();
+        } else {
             d.resolve(this.req.body);
+            return;
         }
 
-        let instance = model.getInstance();
-        if(model.bind){
+        if(model && model.bind){
             this.binder.bind(model, this.req.body).then((modelState: ModelState) => {
                 this.ctrlContext.modelState.add(modelState.errors);
                 d.resolve(instance);

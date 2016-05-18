@@ -20,9 +20,29 @@ let _connections = {};
  *
  * @type {Object}
  */
-let _defCollections = {
-    default: ['Action', 'Document'],
-    obpm_users: ['User', 'Client']
+let _defElements = {
+    default: {
+        cols: ['Action', 'Document', 'DocumentType'],
+        edges: ['hasDocument', 'hasModel'],
+        graphs: [{
+            name: 'documentTypes',
+            edgeDefinitions: [{
+                collection: 'hasModel',
+                from: ['DocumentType'],
+                to: ['DocumentType']
+            }]
+        }, {
+            name: 'documents',
+            edgeDefinitions: [{
+                collection: 'hasDocument',
+                from: ['Document'],
+                to: ['Document']
+            }]
+        }]
+    },
+    obpm_users: {
+        cols: ['User', 'Client']
+    }
 };
 
 /**
@@ -59,23 +79,36 @@ export class Database{
             this.conn = new arango.Database({databaseName : this.dbName});
             this.conn.useDatabase(this.dbName);
 
-            return existed === true ? this : this.prepareCollections();
+            return existed === true ? this : this.prepareDatabase();
         });
     }
 
     /**
-     * Creates all default collections and resolved the promise as soon as
-     * all collections are created.
+     * Creates all default objects, such as collections, edge collections, graphs, etc.
      *
-     * @method prepareCollections
+     * @method prepareDatabase
      *
      * @returns {q.Promise<any>}
      */
-    private prepareCollections(): q.Promise<any>{
-        let cols = _defCollections[this.dbName] || _defCollections.default;
-        return q.all(cols.map(c => {
+    private prepareDatabase(): q.Promise<any>{
+        let elems = _defElements[this.dbName] || _defElements.default;
+        let ps = [];
+        ps.push(elems.cols.map(c => {
             return toQ(this.conn.collection(c).create());
-        })).then(() => this);
+        }));
+        ps.push(elems.edges.map(c => {
+            return toQ(this.conn.edgeCollection(c).create());
+        }));
+
+        return q.all(ps)
+        .then(() => {
+            return q.all(elems.graphs.map(g => {
+                return toQ(this.conn.graph(g.name).create({
+                    edgeDefinitions: g.edgeDefinitions
+                }));
+            }));
+        })
+        .then(() => this);
     }
 
     /**
@@ -135,6 +168,14 @@ export class Database{
     public getModelById(id: string): q.Promise<any> {
         let ids = id.split('/');
         return this.getModel(ids[0], ids[1]);
+    }
+
+    public drop(): q.Promise<any> {
+        return toQ<any>(arango().dropDatabase(this.dbName)
+        .then(() => {
+            delete _connections[this.dbName];
+            return 'process database deleted successfully.';
+        }));
     }
 }
 

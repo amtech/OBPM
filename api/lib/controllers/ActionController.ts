@@ -11,7 +11,7 @@ import httpErr from '../routing/HttpError';
 import * as actionResult from '../routing/ActionResult';
 
 @CtrlAuth(['modeler'])
-export default class ActionController extends RepositoryController<ActionRespository, Action> {
+export default class ActionController extends RepositoryController<ActionRespository> {
 
     constructor(){
         super(ActionRespository, Action);

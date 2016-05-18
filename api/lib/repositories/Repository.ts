@@ -12,17 +12,27 @@ export default class Repository {
     constructor(protected db: Database){
     }
 
-    public getModel(id: any, throwIfNotExisting?: boolean): q.Promise<any>{
-        let pModel = this.db.getModel(this.modelType, id);
+    public get DB() {
+        return this.db;
+    }
+
+    public getModel(key: any, throwIfNotExisting?: boolean): q.Promise<any>{
+        let pModel = this.db.getModel(this.modelType, key);
         return !throwIfNotExisting ? pModel : pModel.then(m => {
             if(m) return m;
-            throw httpErr.execution(`No resource of type ${this.modelType} and id ${id} could be found.`);
+            throw httpErr.execution(`No resource of type ${this.modelType} and key ${key} could be found.`);
         });
     }
 
-    public updateModel(id: any, data:any): q.Promise<any> {
-        return this.getModel(id, true).then(model => {
+    public updateModel(key: any, data:any): q.Promise<any> {
+        return this.getModel(key, true).then(model => {
             this.db.collection(this.modelType).replace(model, data);
+        });
+    }
+
+    public patchModel(key: any, data: any): q.Promise<any> {
+        return this.getModel(key, true).then(model => {
+            this.db.collection(this.modelType).update(model, data);
         });
     }
 
@@ -30,7 +40,14 @@ export default class Repository {
         return this.db.collection(this.modelType).save(data);
     }
 
-    public removeModel(id: any): q.Promise<any> {
-        return this.db.collection(this.modelType).remove(id);
+    public removeModel(key: any): q.Promise<any> {
+        return this.db.collection(this.modelType).remove(key);
+    }
+
+    public getAllModels(): q.Promise<any> {
+        return this.db.all(`
+            for m in ${this.modelType}
+            return m
+        `);
     }
 }

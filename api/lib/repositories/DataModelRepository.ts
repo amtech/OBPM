@@ -21,10 +21,23 @@ export default class DataModelRespository extends Repository {
         super(db);
     }
 
-    public createDocument(doc: ModelDocument): q.Promise<any>{
-        if(doc.type !== 'Case' && !doc.parent) {
-            throw httpErr.validation([], 'Only Case document is allowed to have no parent.');
+    public createType(doc: ModelDocument): q.Promise<any>{
+        // check valid client data:
+        if (doc.type !== 'Case') {
+            var errors = [];
+            if(!doc.parent) errors.push({message: 'Only type Case is allowed to have no parent.',
+                type: 'any',
+                path: 'parent'
+            });
+            if(!doc.property) errors.push({
+                message: 'Only type Case is allowed to have no property.',
+                type: 'any',
+                path: 'property'
+            });
+            if(errors.length) throw httpErr.validation(errors);
         }
+
+        // if type == Case: Check if a Case already exists:
         return (doc.type !== 'Case' ? q.fcall(() => null) : this.db.single(`
             for caseDoc in DocumentType
             filter caseDoc.type == 'Case'
@@ -34,22 +47,37 @@ export default class DataModelRespository extends Repository {
             if(caseDoc) {
                 throw httpErr.execution('Only one document of type Case is allowed.');
             }
-            return this.db.collection('DocumentType').save({type: doc.type})
         })
-        .then(newDoc => {
-            if(doc.type === 'Case') return newDoc;
+        // Type != Case: get parent doc:
+        .then(() => {
+            return (doc.type === 'Case' ? q.fcall(() => 1) : this.db.single(`
+                for doc in DocumentType
+                filter doc._key == '${doc.parent}'
+                return doc
+            `));
+        })
+        .then(parent => {
+            if (!parent) {
+                throw httpErr.validation([{ message: 'invalid parent ID',
+                    type: 'any',
+                    path: 'parent'
+                }]);
+            }
+            // save new doc and return it together with parent:
+            return toQ<any>(this.db.collection('DocumentType').save({type: doc.type}))
+            .then((newDoc => {
+                return {newDoc, parent};
+            }));
+        })
+        // Save edge-doc to parent:
+        .then(docs => {
+            if(doc.type === 'Case') return docs.newDoc;
 
-            return this.db.getModel('DocumentType', doc.parent)
-            .then(parent => {
-                if(!parent) {
-                    throw httpErr.validation([], 'Invalid parent ID provided.');
-                }
-                return toQ(this.db.edgeCollection('hasModel').save({
-                    max: doc.max,
-                    fromId: parent._id,
-                    toId: newDoc._id
-                }));
-            });
+            return toQ(this.db.edgeCollection('hasModel').save(
+                { max: doc.max, property: doc.property },
+                docs.parent._id,
+                docs.newDoc._id)
+            ).then(docs.newDoc);
         });
     }
 
