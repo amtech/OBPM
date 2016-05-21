@@ -1,5 +1,4 @@
 import Repository from './Repository';
-import ExecutionContext from '../viewmodels/ExecutionContext';
 import * as q from 'q';
 import Action from '../models/Action';
 import db, {Database} from '../db';
@@ -18,23 +17,6 @@ export default class ActionRespository extends Repository {
 
     constructor(protected db: Database){
         super(db);
-    }
-
-    /**
-     * Executes the given action
-     *
-     * @method executeAction
-     *
-     * @param {string} actionId [description]
-     * @param {ExecutionContext} context [description]
-     *
-     * @returns {[type]} [description]
-     */
-    public executeAction(context: ExecutionContext, user): q.Promise<any>{
-        return this.getModel(context.actionId, true).then((action: Action) => {
-            let executer = new ActionExecutor(context, action, user, this.db);
-            return executer.execute();
-        });
     }
 
     public findbyName(name: string){

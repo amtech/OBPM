@@ -1,5 +1,5 @@
 import db, {Database} from '../db';
-import ExecutionContext from '../viewmodels/ExecutionContext';
+import ExecutionContext from '../models/Execution';
 import Action from '../models/Action';
 import * as q from 'q';
 let enjoi = require('enjoi');

@@ -7,7 +7,6 @@ import * as q from 'q';
 import db, {Database} from '../db';
 import CtrlAuth from '../decorators/ControllerAuthorization';
 
-@CtrlAuth(['admin'])
 export default class RepositoryController<T extends Repository> extends Controller{
     protected repo: T;
     protected repoType: new(database: Database) => T;

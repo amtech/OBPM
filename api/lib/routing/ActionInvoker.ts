@@ -174,7 +174,7 @@ export default class ActionInvoker{
                     return true;
                 }
             }
-            throw httpErr.auth('No permission for execution.');
+            throw httpErr.auth('No access to the requested route.');
         })
     }
 

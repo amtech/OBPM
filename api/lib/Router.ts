@@ -6,7 +6,9 @@ import DocumentController from './controllers/DocumentController';
 import UserController from './controllers/UserController';
 import DataModelController from './controllers/DataModelController';
 import EnvironmentController from './controllers/EnvironmentController';
+import ExecutionController from './controllers/ExecutionController';
 import authModel from './helpers/auth-model';
+import * as morgan from 'morgan';
 
 import HttpError from './routing/HttpError';
 let oauthServer = require('oauth2-server');
@@ -20,7 +22,8 @@ export default class RouterRegistrar{
                 DocumentController,
                 UserController,
                 DataModelController,
-                EnvironmentController
+                EnvironmentController,
+                ExecutionController
             ],
             rejectOn404: true
         });
@@ -45,11 +48,15 @@ export default class RouterRegistrar{
      */
     initRoutes(){
 
+        this.app.use(morgan('combined'));
+
         // auth
         this.app.all('/oauth/token', this.oauth.grant());
         this.app.use(this.oauth.authorise());
 
         // specific REST routes
+        this.app.use('/user/:id(\\d+)', this._router.handle({controller: 'user'}));
+        this.app.use('/user$', this._router.handle({controller: 'user'}));
         this.app.use('/:tid$', this._router.handle({ controller: 'environment' }));
 
         // generic REST routes

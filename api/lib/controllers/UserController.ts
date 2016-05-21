@@ -3,6 +3,7 @@ import NewUser from '../viewmodels/NewUser';
 import UpdateUser from '../viewmodels/UpdateUser';
 import ActionModel from '../decorators/ActionModel';
 import ActionAuth from '../decorators/ActionAuthorization';
+import CtrlAuth from '../decorators/ControllerAuthorization';
 import AuthRepository from '../repositories/AuthRepository';
 import * as q from 'q';
 import httpErr from '../routing/HttpError';
@@ -30,6 +31,7 @@ export class UpdatePasswordViewModel implements IModel {
     }
 }
 
+@CtrlAuth(['admin'])
 export default class UserController extends Controller {
 
     protected repo: AuthRepository;
@@ -56,15 +58,17 @@ export default class UserController extends Controller {
      * @returns {q.Promise<any>} [description]
      */
     @ActionModel(NewUser, false)
-    @ActionAuth(['admin'])
     post($model: NewUser, $user): q.Promise<any> {
         return this.repo.createUser($model);
     }
 
     @ActionModel(UpdateUser, false)
-    @ActionAuth(['admin'])
-    put($model: UpdateUser): q.Promise<any> {
-        return this.repo.updateUser($model);
+    put($model: UpdateUser, $id): q.Promise<any> {
+        return this.repo.updateUser($model, $id);
+    }
+
+    delete($id): q.Promise<any> {
+        return this.repo.removeModel($id);
     }
 
     /**

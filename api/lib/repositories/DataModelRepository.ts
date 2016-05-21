@@ -1,5 +1,4 @@
 import Repository from './Repository';
-import ExecutionContext from '../viewmodels/ExecutionContext';
 import * as q from 'q';
 import Action from '../models/Action';
 import db, {Database} from '../db';
@@ -77,7 +76,9 @@ export default class DataModelRespository extends Repository {
                 { max: doc.max, property: doc.property },
                 docs.parent._id,
                 docs.newDoc._id)
-            ).then(docs.newDoc);
+            ).then(() => {
+                return docs.newDoc;
+            });
         });
     }
 

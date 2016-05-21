@@ -12,3 +12,5 @@ Opportunistic Business Process Modelling Environment based on ArangoDB
 * Node Monitor: `nodemon --debug dist/lib/index.js`
 * Inspector: `node-inspector`
 * Build `[OBPM]: ./build.sh | [OBPM/api]: ./build.sh`
+* Loadtest: loadtest http://localhost:8090/molena/action/executables -t 20 -c 10 -H "Authorization:Bearer 40f3f1e1641d05eae5695ddb3c7f1de9a840cc1b"
+

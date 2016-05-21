@@ -1,6 +1,7 @@
 import getDB, {Database} from '../db';
 import * as q from 'q';
 import AuthRepository from '../repositories/AuthRepository';
+import HttpError from '../routing/HttpError';
 
 let getRepo = (): q.Promise<AuthRepository> => {
     return AuthRepository.getRepo();
@@ -26,6 +27,15 @@ let model = {
     },
 
     getUser: (username: string, password: string, done) => {
+        getRepo().then(repo => {
+            return repo.verifyUser(username, password);
+        })
+        .then(user => {
+            done(null, user);
+        }, err => {
+            if((<HttpError>err).isAuthError) done(null, null);
+            else done(err);
+        })
         handleDone(getRepo().then(repo => {
             return repo.verifyUser(username, password);
         }), done);

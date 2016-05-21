@@ -58,7 +58,7 @@ export default class AuthRespository extends Repository {
             if(err) {
                 d.reject(err);
             } else if (!ok) {
-                d.reject(httpErr.execution('Invalid username or bad password'));
+                d.reject(httpErr.auth('Invalid username or bad password'));
             } else {
                 d.resolve();
             }
@@ -96,14 +96,14 @@ export default class AuthRespository extends Repository {
         });
     }
 
-    public updateUser(user: UpdateUser): q.Promise<any> {
-        return this.getUser(user._key, true)
+    public updateUser(newData: UpdateUser, key): q.Promise<any> {
+        return this.getUser(key, true)
         .then(user => {
             if(!user) throw httpErr.execution('Could not find user.');
             return user;
         })
         .then(user => {
-            return this.patchModel(user._key, user);
+            return this.patchModel(key, newData);
         });
     }
 
@@ -111,7 +111,7 @@ export default class AuthRespository extends Repository {
      * Verifies the provided user data and returns the DB instance if successful.
      *
      * @method verify
-     *
+     *g
      * @param {string} username user name to validate.
      * @param {string} password password to validate.
      *
@@ -124,7 +124,7 @@ export default class AuthRespository extends Repository {
             return user
         `)
         .then(user => {
-            if (!user) throw httpErr.execution('Invalid username or bad password');
+            if (!user) throw httpErr.auth('Invalid username or bad password');
             return this.verifyPassword(password, user.password).then(() => {
                 return user;
             });
@@ -180,18 +180,14 @@ export default class AuthRespository extends Repository {
     }
 
     public saveAccessToken(accessToken, clientId, expires, user): q.Promise<any> {
-        return this.db.single(`
+        return this.db.q(`
             for t in AccessToken
             filter t.clientId == '${clientId}' && t.userId == '${user._key}'
-            return t
-        `).then(token => {
-            var ps = [];
-            if (token) ps.push(toQ(this.db.collection('AccessToken').remove(token._key)));
-            ps.push(toQ(this.db.collection('AccessToken').save({
+            remove t in AccessToken
+        `).then(() => {
+            return toQ(this.db.collection('AccessToken').save({
                 accessToken, clientId, expires, userId: user._key
-            })));
-
-            return q.all(ps);
+            }));
         });
     }
 

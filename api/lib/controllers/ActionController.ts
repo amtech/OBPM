@@ -1,6 +1,5 @@
 
 import RepositoryController from './RepositoryController';
-import ExecutionContext from '../viewmodels/ExecutionContext';
 import Action from '../models/Action';
 import ActionModel from '../decorators/ActionModel';
 import ActionAuth from '../decorators/ActionAuthorization';
@@ -22,19 +21,6 @@ export default class ActionController extends RepositoryController<ActionResposi
         return actionResult.res(
             this.repo.findbyName($params['name'] || $query['name'])
         );
-    }
-
-    /**
-     * Executes an action using the provided execution context.
-     *
-     * @method execute
-     *
-     * @param {ExecutionContext} $model
-     */
-    @ActionAuth([])
-    @ActionModel(ExecutionContext, false)
-    public execute($model: ExecutionContext, $user): q.Promise<any> {
-        return this.repo.executeAction($model, $user);
     }
 
     @ActionAuth([])

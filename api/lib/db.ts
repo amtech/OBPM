@@ -22,7 +22,7 @@ let _connections = {};
  */
 let _defElements = {
     default: {
-        cols: ['Action', 'Document', 'DocumentType'],
+        cols: ['Action', 'Document', 'DocumentType', 'Execution'],
         edges: ['hasDocument', 'hasModel'],
         graphs: [{
             name: 'documentTypes',
@@ -38,10 +38,29 @@ let _defElements = {
                 from: ['Document'],
                 to: ['Document']
             }]
+        }],
+        docs: [],
+        aql: [{
+            name: 'obpm::getDocumentArray',
+            code: function (action) {
+                var result=[];
+                for (var dName in action.documents) {
+                    if (action.documents.hasOwnProperty(dName)) {
+                        result.push(action.documents[dName]);
+                    }
+                }
+                return result;
+            }
         }]
     },
     obpm_users: {
-        cols: ['User', 'Client']
+        cols: ['User', 'Client'],
+        edges: [],
+        graphs: [],
+        docs: [
+            { col: 'User', data: {} }
+        ],
+        aql: []
     }
 };
 
@@ -93,20 +112,35 @@ export class Database{
     private prepareDatabase(): q.Promise<any>{
         let elems = _defElements[this.dbName] || _defElements.default;
         let ps = [];
+        // collectins:
         ps.push(elems.cols.map(c => {
             return toQ(this.conn.collection(c).create());
         }));
+        // edge collections:
         ps.push(elems.edges.map(c => {
             return toQ(this.conn.edgeCollection(c).create());
         }));
 
         return q.all(ps)
         .then(() => {
-            return q.all(elems.graphs.map(g => {
+            ps = [];
+            // graphs:
+            ps.push(elems.graphs.map(g => {
                 return toQ(this.conn.graph(g.name).create({
                     edgeDefinitions: g.edgeDefinitions
                 }));
             }));
+            // documents:
+            ps.push(elems.docs.map(d => {
+                return toQ(this.conn.collection(d.col).save(d.data));
+            }));
+            // AQL functions:
+            ps.push(elems.aql.map(a => {
+                return toQ(this.conn.createFunction(a.name, a.code.toString()));
+            }));
+
+            return q.all(ps);
+
         })
         .then(() => this);
     }

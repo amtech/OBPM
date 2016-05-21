@@ -40,6 +40,10 @@ export default class HttpError extends Error{
         return this._httpCode === HttpErrorCode.SERVER;
     }
 
+    get isAuthError(): boolean {
+        return this._httpCode === HttpErrorCode.AUTH;
+    }
+
     public static validation(errors: joi.ValidationErrorItem[], message?: string, baseErr?: Error): HttpValidationError{
         return new HttpValidationError(errors, message, baseErr);
     }
