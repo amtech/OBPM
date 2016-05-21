@@ -6,10 +6,12 @@ import * as supertest from 'supertest';
 import db, {Database} from '../../lib/db';
 var defaults = require('superagent-defaults');
 import * as q from 'q';
+import * as fs from 'fs';
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
 chai.use(require('chai-things'));
+chai.use(require('chai-subset'));
 let expect = chai.expect;
 
 let modeler,
@@ -39,12 +41,15 @@ let model = {
     types: {case: '', thesis: '', prof: '', student: '', upload: ''},
     actions: {
         createThesis: '',
-        uploadFile: '',
+        uploadDocument: '',
         rejectUpload: '',
         acceptUpload: '',
+        editUpload: '',
         changeTitle: '',
         acceptTitle: '',
-        assignStudent: ''
+        rejectTitle: '',
+        assignStudent: '',
+        assignProfessor: ''
     }
 }
 
@@ -53,7 +58,10 @@ let procData = {
     case: '',
     thesis: '',
     student: '',
-    professor: ''
+    professor: '',
+    uploads: {
+        Sitzungsprotokoll: ''
+    }
 }
 
 /**
@@ -61,8 +69,13 @@ let procData = {
  *
  * @type {}
  */
-let btoa = (str: string) => {
-    return new Buffer(str).toString('base64');
+let btoa = (data: any): string => {
+    return new Buffer(data).toString('base64');
+}
+
+let getFileStr = (name: string): string => {
+    var file = fs.readFileSync(__dirname + '/../../../test/e2e/' + name);
+    return btoa(file);
 }
 
 /**
@@ -73,9 +86,9 @@ let btoa = (str: string) => {
  */
 let handle = (done, handler?) => {
     return (err, res) => {
-        if(err || res.body.err === false) {
+        if(err || res.err || res.body.err === true) {
             console.error(res.body);
-            done(err || res.body);
+            done(err || res.err);
         } else {
             if (handler) handler(res);
             done();
@@ -106,7 +119,7 @@ let getUser = (user): q.Promise<any> => {
     return d.promise;
 };
 
-describe('create a process model', () => {
+describe('test process model and execution', () => {
     before(done => {
         q.all(config.users.map(u => {
             return getUser(u);
@@ -181,6 +194,34 @@ describe('create a process model', () => {
             }));
         });
 
+        it('created a correct model tree', done => {
+            modeler.get('/datamodel/tree')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body).to.have.property('root');
+                expect(res.body.root).to['containSubset']({
+                    thesis: {
+                        __max: 1,
+                        type: 'Thesis',
+                        uploads: {
+                            type: 'Upload'
+                        }
+                    },
+                    student: {
+                        __max: 1,
+                        type: 'Person'
+                    },
+                    professor: {
+                        __max: 1,
+                        type: 'Person'
+                    }
+                });
+            }));
+        });
+    });
+
+    describe('create action definitions', () => {
+
         it('creates action createThesis', done => {
             modeler.post('/action').send({
                 "createsNewCase": true,
@@ -219,7 +260,7 @@ describe('create a process model', () => {
                 documents: {
                     thesis: {
                         type: 'Thesis',
-                        state: 'created',
+                        state: ['assignedToProfessor'],
                         endState: 'assigned'
                     },
                     newStudent: {
@@ -242,6 +283,36 @@ describe('create a process model', () => {
             }));
         });
 
+        it('creates action assignProfessor', done => {
+            modeler.post('/action').send({
+                name: 'assignProfessor',
+                roles: ['teacher'],
+                documents: {
+                    thesis: {
+                        type: 'Thesis',
+                        state: ['created'],
+                        endState: 'assignedToProfessor'
+                    },
+                    newProfessor: {
+                        type: 'Person',
+                        path: 'professor',
+                        endState: 'assigned',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                userName: { type: 'string' }
+                            },
+                            required: ['userName']
+                        }
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.actions.assignProfessor = res.body._key;
+            }));
+        });
+
         it('creates action uploadDocument', done => {
             modeler.post('/action').send({
                 name: 'uploadDocument',
@@ -249,18 +320,19 @@ describe('create a process model', () => {
                 documents: {
                     thesis: {
                         type: 'Thesis',
-                        state: 'assigned',
+                        state: ['assigned'],
                         endState: 'assigned'
                     },
                     newDocument: {
                         endState: 'uploaded',
                         path: 'thesis.uploads',
+                        type: 'Upload',
                         schema: {
                             type: 'object',
                             properties: {
                                 fileName: { type: 'string' },
                                 mime: {type: 'string' },
-                                content: { type: 'any' }
+                                content: { }
                             },
                             required: ['fileName', 'mime', 'content']
                         }
@@ -269,9 +341,75 @@ describe('create a process model', () => {
             })
             .expect(200)
             .end(handle(done, res => {
-                model.actions.uploadFile = res.body._key;
+                model.actions.uploadDocument = res.body._key;
             }));
         });
+
+        it('creates action rejectUpload', done => {
+            modeler.post('/action').send({
+                name: 'rejectUpload',
+                roles: ['teacher'],
+                documents: {
+                    upload: {
+                        type: 'Upload',
+                        state: ['uploaded'],
+                        endState: 'rejected'
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.actions.rejectUpload = res.body._key;
+            }));
+        });
+
+        it('creates action acceptUpload', done => {
+            modeler.post('/action').send({
+                name: 'acceptUpload',
+                roles: ['teacher'],
+                documents: {
+                    upload: {
+                        type: 'Upload',
+                        state: ['uploaded'],
+                        endState: 'accepted'
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.actions.acceptUpload = res.body._key;
+            }));
+        });
+
+        it('creates action editUpload', done => {
+            modeler.post('/action').send({
+                name: 'editUpload',
+                roles: ['student'],
+                documents: {
+                    upload: {
+                        type: 'Upload',
+                        state: ['uploaded', 'rejected'],
+                        endState: 'uploaded',
+                        schema: {
+                            type: 'object',
+                            properties: {
+                                mime: {type: 'string' },
+                                content: { }
+                            },
+                            required: ['mime', 'content']
+                        }
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.actions.editUpload = res.body._key;
+            }));
+        });
+
+    });
+
+    describe('execute actions', () => {
 
         it('executes createThesis', done => {
             teacher.post('/execution').send({
@@ -304,6 +442,25 @@ describe('create a process model', () => {
             }));
         });
 
+        it('executes assignProfessor', done => {
+            teacher.post('/execution').send({
+                actionId: model.actions.assignProfessor,
+                caseId: procData.case,
+                documents: {
+                    thesis: {
+                        id: procData.thesis
+                    },
+                    newProfessor: {
+                        data: {
+                            userName: 'test-teacher'
+                        }
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done));
+        });
+
         it('executes assignStudent', done => {
             teacher.post('/execution').send({
                 actionId: model.actions.assignStudent,
@@ -314,15 +471,83 @@ describe('create a process model', () => {
                     },
                     newStudent: {
                         data: {
-                            userName: 'e2e-test-student'
+                            userName: 'test-student'
+                        }
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done));
+        });
+
+        it('executes uploadDocument', done => {
+            student.post('/execution').send({
+                actionId: model.actions.uploadDocument,
+                caseId: procData.case,
+                documents: {
+                    thesis: {
+                        id: procData.thesis
+                    },
+                    newDocument: {
+                        data: {
+                            fileName: 'Sitzungsprotokoll 1.pdf',
+                            mime: 'application/pdf',
+                            content: getFileStr('Sitzungsprotokoll 1.pdf')
                         }
                     }
                 }
             })
             .expect(200)
             .end(handle(done, res => {
-                procData.student = res.body._key;
+                procData.uploads.Sitzungsprotokoll =
+                    res.body.find(f => f.type === 'Upload')._key;
             }));
+        });
+
+        it('executes rejectUpload', done => {
+            teacher.post('/execution').send({
+                actionId: model.actions.rejectUpload,
+                caseId: procData.case,
+                documents: {
+                    upload: {
+                        id: procData.uploads.Sitzungsprotokoll
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done));
+        });
+
+        it('executes editUpload', done => {
+            student.post('/execution').send({
+                actionId: model.actions.editUpload,
+                caseId: procData.case,
+                documents: {
+                    upload: {
+                        id: procData.uploads.Sitzungsprotokoll,
+                        data: {
+                            mime: 'application/pdf',
+                            content: getFileStr('Sitzungsprotokoll 2.pdf')
+                        }
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done));
+        });
+
+        it('executes acceptUpload', done => {
+            teacher.post('/execution').send({
+                actionId: model.actions.acceptUpload,
+                caseId: procData.case,
+                documents: {
+                    upload: {
+                        id: procData.uploads.Sitzungsprotokoll
+                    }
+                }
+            })
+            .expect(200)
+            .end(handle(done));
         });
     });
 

@@ -1,4 +1,5 @@
 import Repository from './Repository';
+import CaseRepository, {ObjectTree} from './CaseRepository';
 import * as q from 'q';
 import Action from '../models/Action';
 import db, {Database} from '../db';
@@ -15,8 +16,11 @@ export default class ActionRespository extends Repository {
         return 'Action';
     }
 
+    protected caseRepo: CaseRepository;
+
     constructor(protected db: Database){
         super(db);
+        this.caseRepo = new CaseRepository(db);
     }
 
     public findbyName(name: string){
@@ -38,8 +42,62 @@ export default class ActionRespository extends Repository {
      * @returns {q.Promise<any>}
      */
     public getExecutableActions(user): q.Promise<any> {
-        return this.db.all(`
+        return this.getActionCases()
+        .then((actions: any[]) => {
+            return q.all(actions.map(r => this.filterByUser(r, user)))
+            .then((result: boolean[]) => {
+                for (let i = 0; i < result.length; i++) {
+                    if (result[i] !== true) {
+                        actions.splice(i, 1);
+                    }
+                }
+
+                return actions;
+            });
+        });
+    }
+
+    protected filterByUser(action, user): q.Promise<boolean> {
+        if (!action.cases) {
+            return q.fcall(() => {
+                return ActionExecutor.isExecutableByUser(action, user);
+            });
+        }
+
+        return q.all(action.cases.map(c => this.caseRepo.getCaseTree(c.caseId)))
+        .then((trees: ObjectTree[])  => {
+            for (let i = 0; i < trees.length; i++) {
+                if(!ActionExecutor.isExecutableByUser(action, user, trees[i])) {
+                    action.cases.splice(i, 1);
+                }
+            }
+        })
+        .then(() => {
+            return action.cases.length > 0;
+        });
+    }
+
+    protected getActionCases(): q.Promise<any> {
+        var promises = [];
+
+        // get actions which are case independent:
+        promises.push(this.db.all(`
             for action in Action
+            let actionDocs = obpm::getDocumentArray(action)
+            filter action.createsNewCase == true
+            let matches = (
+                for actionDoc in actionDocs
+                    return { actionDoc: actionDoc, matchingDocs: [] }
+            )
+            return {
+                actionName: action.name, roles: action.roles, matches: matches
+            }
+        `));
+
+        // Get actions and their cases:
+        promises.push(this.db.all(`
+            for action in Action
+                filter action.createsNewCase != true
                 let actionDocs = obpm::getDocumentArray(action)
                 let cases = (
                     for case in Document
@@ -67,8 +125,18 @@ export default class ActionRespository extends Repository {
                 )
                 filter length(cases) > 0 || action.createsNewCase == true
                 return {
-                    actionName: action.name, cases
+                    actionName: action.name, roles: action.roles, cases
                 }
-        `);
+        `));
+
+        // concat and return results:
+        return q.all(promises).then(result => {
+            let concat = [];
+            for(let arr of result) {
+                concat = concat.concat(arr);
+            }
+
+            return concat;
+        });
     }
 }

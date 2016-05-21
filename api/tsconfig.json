@@ -28,6 +28,7 @@
         "lib/controllers/EnvironmentController.ts",
         "lib/controllers/ExecutionController.ts",
         "lib/controllers/IController.ts",
+        "lib/controllers/RecordController.ts",
         "lib/controllers/RepositoryController.ts",
         "lib/controllers/UserController.ts",
         "lib/db.ts",

@@ -19,11 +19,13 @@ export default class Action implements IModel{
             documents: joi.object().required().unknown(true)
             .pattern(/\w\d/, joi.object({
                 type: joi.string().required(),
-                path: joi.string(),
-                endState: joi.string().required(),
+                path: joi.string().optional(),
+                endState: joi.string().optional(),
                 schema: joi.object().optional(),
-                state: joi.string()
-            }).xor('path', 'state'))
+                state: joi.array().items(joi.string()).optional()
+            })
+            .or('state', 'endState')
+            .xor('state', 'path'))
         });
     }
 }

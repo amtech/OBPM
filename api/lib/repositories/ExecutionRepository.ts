@@ -23,8 +23,8 @@ export default class ExecutionRepository extends Repository{
             let executer = new ActionExecutor(execution, action, user, this.db);
             return executer.execute();
         })
-        .then(() => {
-            return this.createModel(execution);
+        .then(docs => {
+            return this.createModel(execution).then(() => docs);
         });
     }
 }

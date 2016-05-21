@@ -8,6 +8,7 @@ export default class NewUser implements IModel{
     public email: string;
     public firstName: string;
     public lastName: string;
+    public roles: string[];
 
     getSchema(): joi.ObjectSchema{
         return joi.object({
@@ -15,7 +16,8 @@ export default class NewUser implements IModel{
             password: joi.string().required(),
             email: joi.string().email().required(),
             firstName: joi.string().required(),
-            lastName: joi.string().required()
+            lastName: joi.string().required(),
+            roles: joi.array().items(joi.string()).required()
         });
     }
 }

@@ -22,7 +22,7 @@ let _connections = {};
  */
 let _defElements = {
     default: {
-        cols: ['Action', 'Document', 'DocumentType', 'Execution'],
+        cols: ['Action', 'Document', 'DocumentType', 'Execution', 'Record'],
         edges: ['hasDocument', 'hasModel'],
         graphs: [{
             name: 'documentTypes',
@@ -57,9 +57,47 @@ let _defElements = {
         cols: ['User', 'Client'],
         edges: [],
         graphs: [],
-        docs: [
-            { col: 'User', data: {} }
-        ],
+        docs: [{
+            col: 'User',
+            data: {
+                "userName": "admin",
+                "firstName": "admin",
+                "lastName": "admin",
+                "email": "admin@obpm",
+                "password": "pbkdf2$10000$1050c22e5a105bf4cdb3cb11ce81c05824169f39f25def2d723b2d672124082a7b1553473141007cd97540604ad20301a7beb26dc048f76c0672b5b458c2af52$1ab1682e645156807386af57550f31aaea29b693019060f7d8b57b323f67d383702d3d9480417cc5f0fc901d8d58c283400dd7ac6dd2c749bc5001969e99a0b3",
+                "roles": ["admin"]
+            }
+        }, {
+            col: 'User',
+            data: {
+                "firstName": "test",
+                "userName": "test-modeler",
+                "lastName": "modeler",
+                "email": "test-modeler@obpm",
+                "password": "pbkdf2$10000$d9907b89f5ad4b655d1430cff18e4ffc45d43e684c5ab2f589e49f563cc016aedb81ceaedcccb296162cd564d0a3b80eb47cfc8e89f1eb69c767d5948c5ff1e5$2af0d8e40c68b8b007db833155698beae98481aa93fd2e36793af37eb549576f62aaabe55200de170a56b7fac98193a361397be6fc860296330ad6b42b6ffc8a",
+                "roles": ["modeler"]
+            }
+        }, {
+            col: 'User',
+            data: {
+                "firstName": "test",
+                "userName": "test-teacher",
+                "lastName": "teacher",
+                "email": "test-teacher@obpm",
+                "password": "pbkdf2$10000$98126e29b61c2ffc224eda9ee23075d0d25db25b98d4b803787be3bec4389850e3d20f9dafc9949b3b193f86114d2ecf8f26631b81bb0d957e325692bd3dac88$15f7d45c8514826ccd6ebd68a7f985ddc2d6739e4a38e580b709a5738325cea339a4832d7d2832156a786e645a3d390f28158b3180c4569751917de05cb1f13c",
+                "roles": ["teacher"]
+            }
+        }, {
+            col: 'User',
+            data: {
+                "firstName": "test",
+                "userName": "test-student",
+                "lastName": "student",
+                "email": "test-student@obpm",
+                "password": "pbkdf2$10000$7bc671c3ae1f4249bdbde39fe592e6bd601f4692b11996b9620d1e60315d8ca57b899f031f76238ad77c0ed83b4c5bb36faaf85aef6829dd9a691a8465867da9$054220f88ae444b4c8fe10fc2afc2b94340d8efa88ccbdcbb4736183dfd9809bdb5ca3c12ef32c60a589e3a43f0d12fbcdadee9c3b9c924023b0906d6568fcc1",
+                "roles": ["student"]
+            }
+        }],
         aql: []
     }
 };

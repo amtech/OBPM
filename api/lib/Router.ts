@@ -7,6 +7,7 @@ import UserController from './controllers/UserController';
 import DataModelController from './controllers/DataModelController';
 import EnvironmentController from './controllers/EnvironmentController';
 import ExecutionController from './controllers/ExecutionController';
+import RecordController from './controllers/RecordController';
 import authModel from './helpers/auth-model';
 import * as morgan from 'morgan';
 
@@ -23,7 +24,8 @@ export default class RouterRegistrar{
                 UserController,
                 DataModelController,
                 EnvironmentController,
-                ExecutionController
+                ExecutionController,
+                RecordController
             ],
             rejectOn404: true
         });

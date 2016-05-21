@@ -13,6 +13,7 @@ import * as objectPath from 'object-path';
 /**
  * Executes an action based on a given execution context.
  * This includes document queying, creating, data mapping and constraint handling.
+ * Thsi executer also updates the document records accordingly.
  */
 export default class ActionExecutor{
 
@@ -32,14 +33,23 @@ export default class ActionExecutor{
         this.newEdges = [];
     }
 
-    private isExecutableByUser(caseInstance: ObjectTree): boolean {
-        let uRoles = this.user.roles;
+    /**
+     * Returns if the current action is executable by the current user.
+     *
+     * @method isExecutableByUser
+     *
+     * @param {ObjectTree} caseInstance Current document structure tree.
+     *
+     * @returns {boolean}
+     */
+    public static isExecutableByUser(action: Action, user, caseInstance?: ObjectTree): boolean {
+        let uRoles = user.roles;
         if (!uRoles || !uRoles.length) return false;
-        let resolved = this.action.roles.map(r => {
+        let resolved = !caseInstance ? action.roles : action.roles.map(r => {
             return caseInstance.resolveVar(r);
         })
         // check user:
-        if (resolved.indexOf(this.user.userName)) {
+        if (resolved.indexOf(user.userName) >= 0) {
             return true;
         }
 
@@ -53,16 +63,26 @@ export default class ActionExecutor{
         return false;
     }
 
+    /**
+     * Executes the current wrapped action.
+     *
+     * @method execute
+     *
+     * @returns {q.Promise<any>}
+     */
     execute(): q.Promise<any>{
         if(this.isExecuted) throw httpErr.server('ActionExecuter already executed.');
         this.isExecuted = true;
 
         return this.getCaseKey()
+        // get case
         .then(key => this.caseRepo.getCaseTree(key))
+        // validate execution and map data to docs:
         .then(c => {
-            if(c) {this.caseInstance = c };
+            if(c) {this.caseInstance = c }
+            else if(!this.caseInstance) { throw httpErr.execution('Invalid case ID.'); }
 
-            if(!this.isExecutableByUser(this.caseInstance)) {
+            if(!ActionExecutor.isExecutableByUser(this.action, this.user, this.caseInstance)) {
                 throw httpErr.execution('Not permitted to execute this action.');
             }
 
@@ -70,22 +90,54 @@ export default class ActionExecutor{
                 return this.mapData(d);
             }));
         })
+        // save or update mapped docs:
         .then(docs => {
             let col = this.db.collection('Document');
             return q.all(docs.map((doc => {
                 let dbDoc = this.stripDocument(doc);
                 return dbDoc._key ? col.replace(dbDoc._key, dbDoc) : col.save(dbDoc).then(res => {
                     doc._id = res._id;
+                    doc._key = res._key;
+                    doc._rev = res._rev;
                 });
-            })));
+            })))
+            .then(() => {
+                return docs;
+            });
         })
-        .then(() => {
+        // create record for each manipulated doc:
+        .then(docs => {
+            let col = this.db.collection('Record');
+            // Only create a record for manipulated docs:
+            return q.all(docs.filter((d => d['__mapped'])).map((d: any) => {
+                let startState = d.__origState;
+                return toQ(col.save({
+                    user: this.user.userName,
+                    document: {
+                        id: d._id,
+                        key: d._key,
+                        data: d.data,
+                        type: d.type
+                    },
+                    startState: startState,
+                    endState: d.state
+                }));
+            }))
+            .then(() => {
+                return docs;
+            });
+        })
+        // create new edge documents for newly created docs:
+        .then((docs) => {
             if(!this.newEdges.length) return;
 
             let edgeCol = this.db.edgeCollection('hasDocument');
             return q.all(this.newEdges.map(ed => {
                 return edgeCol.save(ed.data, ed.from._id, ed.to._id);
-            }));
+            }))
+            .then(() => {
+                return docs.map(d => this.stripDocument(d));
+            });
         });
     }
 
@@ -144,7 +196,7 @@ export default class ActionExecutor{
                 docData = docInfo.doc.data,
                 schema = docInfo.actionDef.schema;
 
-            if(schema){
+            if(execData && schema){
                 let joiSchema = <joi.ObjectSchema>enjoi(schema),
                     validation = joi.validate(execData, joiSchema, {abortEarly: false});
                 if(validation.error){
@@ -155,8 +207,17 @@ export default class ActionExecutor{
                 }
             }
 
-            extend(true, docData, execData);
-            docInfo.doc.state = docInfo.actionDef.endState;
+            if(execData) {
+                extend(true, docData, execData);
+                docInfo.doc.__mapped = true;
+            }
+            // cache original state for the records.
+            docInfo.doc.__origState = docInfo.doc.state;
+            let newState = docInfo.actionDef.endState || docInfo.actionDef.state;
+            if(!newState) {
+                throw httpErr.execution('Expecting an end state but either endState nor state wa defined.');
+            }
+            docInfo.doc.state = newState;
             return docInfo.doc;
         });
     }
@@ -177,13 +238,13 @@ export default class ActionExecutor{
         if(!contextDoc) throw new Error(`Missing document ${name}.`);
 
         // Action expects existing doc but no key was provided:
-        if(actionDef.startState && !contextDoc.id)
+        if(actionDef.state && !contextDoc.id)
             throw httpErr.execution('Expecting identifier for document ' + name);
 
         return this.getDocument(actionDef, contextDoc)
             .then(doc => {
                 if(!doc) throw new Error(
-                    `Could not find ${name} in state ${actionDef.startState}`
+                    `Provided ${name} is not in state ${actionDef.state}`
                 );
 
                 return {contextDoc, actionDef, doc, name};
@@ -208,7 +269,7 @@ export default class ActionExecutor{
         if (key) {
             return q.fcall(() => {
                 let eDoc = this.caseInstance.documents['Document/' + key];
-                if(eDoc.type === type && eDoc.state === actionDef.state) return eDoc;
+                if(eDoc.type === type && actionDef.state.indexOf(eDoc.state) >= 0) return eDoc;
                 return;
             });
         } else {
