@@ -26,11 +26,4 @@ else
     printinfo "typescript compilation finished."
 fi
 
-printStep "running unit tests."
-if ! mocha dist/test/**/*.js; then
-    printerr "Mocha tests failed."
-else
-    printinfo "All tests passed."
-fi
-
 printinfo "API build succeed."
