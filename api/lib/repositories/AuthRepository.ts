@@ -8,6 +8,7 @@ import * as extend from 'extend';
 import toQ from '../helpers/toq';
 import * as express from 'express';
 var pwHandler = require('password-hash-and-salt');
+import appConfig from '../app-config';
 
 export default class AuthRespository extends Repository {
 
@@ -180,7 +181,10 @@ export default class AuthRespository extends Repository {
     }
 
     public saveAccessToken(accessToken, clientId, expires, user): q.Promise<any> {
-        return this.db.q(`
+        return toQ(this.db.collection('AccessToken').save({
+            accessToken, clientId, expires, userId: user._key
+        }));
+        /*return this.db.q(`
             for t in AccessToken
             filter t.clientId == '${clientId}' && t.userId == '${user._key}'
             remove t in AccessToken
@@ -188,7 +192,7 @@ export default class AuthRespository extends Repository {
             return toQ(this.db.collection('AccessToken').save({
                 accessToken, clientId, expires, userId: user._key
             }));
-        });
+        });*/
     }
 
     public getAccessToken(token: string): q.Promise<any> {
@@ -240,7 +244,7 @@ export default class AuthRespository extends Repository {
      * @returns {q.Promise<AuthRespository>}
      */
     public static getRepo(): q.Promise<AuthRespository> {
-        return this._cachedRepo || (this._cachedRepo = db('obpm_users').then(database => {
+        return this._cachedRepo || (this._cachedRepo = db(appConfig().authDatabase).then(database => {
             return new AuthRespository(database);
         }));
     }

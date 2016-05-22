@@ -22,9 +22,6 @@ export default class ExecutionRepository extends Repository{
         return this.actionRepo.getModel(execution.actionId, true).then((action: Action) => {
             let executer = new ActionExecutor(execution, action, user, this.db);
             return executer.execute();
-        })
-        .then(docs => {
-            return this.createModel(execution).then(() => docs);
         });
     }
 }

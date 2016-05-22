@@ -3,35 +3,17 @@ import * as express from 'express';
 import * as http from 'http';
 import Router from './Router';
 import * as bodyParser from 'body-parser';
-
-export interface ApiOptions{
-    apiHost?: string;
-    apiPort?: number;
-    dbHost?: string;
-    dbPort?: number;
-}
+import appConfig from './app-config';
+import * as q from 'q';
 
 /**
  * Base API wrapper class.
  */
-export class App {
-    opts: ApiOptions;
+export default class App {
     express: express.Express;
     private _server: http.Server;
     private _initialized: boolean;
     private _router: Router;
-
-    /**
-     * Default Api options.
-     * @type {{dbHost: string, dbPort: number, apiHost: string, apiPort: number}}
-     * @private
-     */
-    private static _defApiOpts: ApiOptions = {
-        dbHost: 'localhost',
-        dbPort: 8529,
-        apiHost: 'localhost',
-        apiPort: 8090
-    };
 
     /**
      * Creates a new API instance.
@@ -42,8 +24,7 @@ export class App {
      *
      * @returns {App} new Api App instance.
      */
-    constructor(options?: ApiOptions){
-        this.opts = extend({}, App._defApiOpts, (options || {}));
+    constructor(){
         this.express = express();
         this._router = new Router(this.express);
     }
@@ -51,13 +32,27 @@ export class App {
     /**
      * Starts the underlying web server based on the current API options.
      *
+     * @param {string[]} argv optional start arguments.
+     *
      * @method start
      */
-    public start(): void{
-        if(!this._initialized){
-            this._initExpress();
+    public start(argv?: any): q.Promise<any>{
+        let d = q.defer();
+        try {
+            this._parseArgs(argv);
+
+            if(!this._initialized){
+                this._initExpress();
+            }
+
+            this._server = this.express.listen(appConfig().apiPort, () => {
+                d.resolve();
+            });
+        } catch (err) {
+            d.reject(err);
         }
-        this._server = this.express.listen(this.opts.apiPort);
+
+        return d.promise;
     }
 
     /**
@@ -85,6 +80,11 @@ export class App {
             this._router.initRoutes();
         }
     }
-}
 
-export default new App();
+    private _parseArgs(args) {
+        let cfg = appConfig();
+        cfg.authDatabase = args.authdb ? args.authdb : cfg.authDatabase;
+        cfg.apiPort = args.port ? args.port : cfg.apiPort;
+        cfg.dbPort = args.dbport ? args.dbport : cfg.dbPort;
+    }
+}

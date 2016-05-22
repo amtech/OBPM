@@ -1,3 +1,6 @@
-import {default as api} from './Api';
+import API from './Api';
+import * as minimist from 'minimist';
 
-api.start();
+let argv = minimist(process.argv.slice(2)),
+    api = new API();
+api.start(argv);

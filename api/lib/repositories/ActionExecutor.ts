@@ -7,6 +7,7 @@ import * as joi from 'joi';
 import httpErr from '../routing/HttpError';
 import * as extend from 'extend';
 import CaseRepository, {ObjectTree} from './CaseRepository';
+import RecordRepository from './RecordRepository';
 import toQ from '../helpers/toq';
 import * as objectPath from 'object-path';
 
@@ -18,6 +19,7 @@ import * as objectPath from 'object-path';
 export default class ActionExecutor{
 
     private caseRepo: CaseRepository;
+    private recordRepo: RecordRepository;
     private internalActions: InternalActions;
     private isExecuted: boolean;
     private caseInstance: ObjectTree;
@@ -29,6 +31,7 @@ export default class ActionExecutor{
         private user,
         private db: Database){
         this.caseRepo = new CaseRepository(this.db);
+        this.recordRepo = new RecordRepository(this.db);
         this.internalActions = new InternalActions(this.db, this.context);
         this.newEdges = [];
     }
@@ -105,23 +108,19 @@ export default class ActionExecutor{
                 return docs;
             });
         })
-        // create record for each manipulated doc:
+        // create record for each doc:
         .then(docs => {
             let col = this.db.collection('Record');
             // Only create a record for manipulated docs:
-            return q.all(docs.filter((d => d['__mapped'])).map((d: any) => {
+            return q.all(docs.map((d: any) => {
                 let startState = d.__origState;
-                return toQ(col.save({
-                    user: this.user.userName,
-                    document: {
-                        id: d._id,
-                        key: d._key,
-                        data: d.data,
-                        type: d.type
-                    },
-                    startState: startState,
-                    endState: d.state
-                }));
+                return this.recordRepo.createRecord(this.user, this.action, {
+                    key: d._key,
+                    type: d.type,
+                    oldState: d.__origState,
+                    newState: d.state,
+                    data: d.__mappedData
+                });
             }))
             .then(() => {
                 return docs;
@@ -209,10 +208,11 @@ export default class ActionExecutor{
 
             if(execData) {
                 extend(true, docData, execData);
-                docInfo.doc.__mapped = true;
             }
-            // cache original state for the records.
+            // cache original state and data for the records.
             docInfo.doc.__origState = docInfo.doc.state;
+            docInfo.doc.__mappedData = execData;
+
             let newState = docInfo.actionDef.endState || docInfo.actionDef.state;
             if(!newState) {
                 throw httpErr.execution('Expecting an end state but either endState nor state wa defined.');

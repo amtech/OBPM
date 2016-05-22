@@ -5,7 +5,7 @@ import ControllerContext from './ControllerContext';
 import db, {Database} from '../db';
 import CtrlAuth from '../decorators/ControllerAuthorization';
 
-@CtrlAuth(['modeler'])
+@CtrlAuth(['modeler', 'admin'])
 export default class EnvironmentController extends Controller {
 
     protected repo: EnvironmentRepository;

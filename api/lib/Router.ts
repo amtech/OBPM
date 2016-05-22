@@ -50,7 +50,7 @@ export default class RouterRegistrar{
      */
     initRoutes(){
 
-        this.app.use(morgan('combined'));
+        //this.app.use(morgan('combined'));
 
         // auth
         this.app.all('/oauth/token', this.oauth.grant());

@@ -7,6 +7,7 @@ import db, {Database} from '../../lib/db';
 var defaults = require('superagent-defaults');
 import * as q from 'q';
 import * as fs from 'fs';
+import API from '../../lib/Api';
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
@@ -15,24 +16,45 @@ chai.use(require('chai-subset'));
 let expect = chai.expect;
 
 let modeler,
-    teacher,
-    student;
+    admin,
+    teacher1,
+    student1,
+    teacher2,
+    student2;
 
 // test case config data:
 let config = {
-    url: 'http://localhost:8090/',
+    port: 8095,
+    url: 'http://localhost:8095/',
     clientId: 'e2e-test-client',
     clientSecret: 'e2e-test-dg2343%.s79',
     dbName: 'e2e-test',
+    authDatabase: 'test-users',
     users: [{
         userName: 'test-modeler',
-        password: 'test-modeler-cs75=9&s'
+        password: 'test-modeler-cs75=9&s',
+        firstName: 'test', lastName: 'modeler', email: 'test@obpm',
+        roles: ['modeler']
     }, {
-        userName: 'test-teacher',
-        password: 'test-teacher-x,783&nj'
+        userName: 'test-teacher1',
+        password: 'test-teacher1-x,783&nj',
+        firstName: 'test', lastName: 'teacher1', email: 'test@obpm',
+        roles: ['teacher']
     }, {
-        userName: 'test-student',
-        password: 'test-student-bf6&hn.='
+        userName: 'test-student1',
+        password: 'test-student1-bf6&hn.=',
+        firstName: 'test', lastName: 'student1', email: 'test@obpm',
+        roles: ['student']
+    }, {
+        userName: 'test-teacher2',
+        password: 'test-teacher2-x,783&nj',
+        firstName: 'test', lastName: 'teacher2', email: 'test@obpm',
+        roles: ['teacher']
+    }, {
+        userName: 'test-student2',
+        password: 'test-student2-bf6&hn.=',
+        firstName: 'test', lastName: 'student2', email: 'test@obpm',
+        roles: ['student']
     }]
 };
 
@@ -96,38 +118,120 @@ let handle = (done, handler?) => {
     };
 }
 
-let getUser = (user): q.Promise<any> => {
-    var d = q.defer();
-    supertest(config.url)
+let toQ = (call): q.Promise<any> => {
+    let d = q.defer();
+    call.end((err, res) => {
+        err = err || res.error;
+        if (err) console.log(err), d.reject(err);
+        else d.resolve(res);
+    });
+
+    return d.promise;
+}
+
+/**
+ * Creates and returns an api interface fr the specified user config.
+ */
+let getUserApi = (user, dbName): q.Promise<any> => {
+    return toQ(supertest(config.url)
     .post('oauth/token')
     .set('Authorization', 'Basic ' + btoa(`${config.clientId}:${config.clientSecret}`))
     .set('Content-Type', 'application/x-www-form-urlencoded')
     .type('form')
     .send({grant_type: 'password'})
     .send({username: user.userName})
-    .send({password: user.password})
-    .end((err, res) => {
-        if(err || res.error || res.status !== 200) {
-            d.reject(err || res.error);
-        } else {
-            let api = defaults(supertest(`${config.url}${config.dbName}`))
-            .set('Authorization', 'Bearer ' + res.body.access_token);
-            d.resolve({api, user});
-        }
+    .send({password: user.password}))
+    .then(res => {
+        let api = defaults(supertest(`${config.url}${dbName}`))
+        .set('Authorization', 'Bearer ' + res.body.access_token);
+        return {api, user};
     });
-
-    return d.promise;
 };
 
+/**
+ * Creates a new oBPM user based on the provided config.
+ * @param {object} admin admin API interface.
+ * @param {object} userCfg User config.
+ */
+let createUser = (admin, userCfg): q.Promise<any> => {
+    return toQ(admin.post('/user').send(userCfg));
+}
+
+/**
+ * Removes a single user.
+ */
+let removeUser = (key: any): q.Promise<any> => {
+    return toQ(admin.delete('/user/' + key));
+}
+
+/**
+ * Makes shure that no old data is in datastore and removes
+ * old database instances is existing.
+ */
+let prepareDatabases = (): q.Promise<any> => {
+    let testDB = new Database(config.dbName),
+        authDB = new Database(config.authDatabase),
+        promises = [];
+
+    promises.push(testDB.exists().then(exists => {
+        return exists ? testDB.drop() : undefined;
+    }));
+    promises.push(authDB.exists().then(exists => {
+        return exists ? authDB.drop() : undefined;
+    }));
+
+    return q.all(promises);
+};
+
+/**
+ * Removes all test datastores.
+ */
+let cleanupDatabases = (): q.Promise<any> => {
+    return toQ(admin.delete(''))
+    .then(() => {
+        return (new Database(config.authDatabase)).drop()
+    });
+};
+
+let startupApi = (): q.Promise<any> => {
+    let api = new API();
+    return api.start({ port: config.port, authdb: config.authDatabase });
+}
+
 describe('test process model and execution', () => {
+
+    /**
+     * Gets executed before each full test run.
+     * Creates all necessary oBPM users by the default admin account and then
+     * authenticates each user against the API.
+     */
     before(done => {
-        q.all(config.users.map(u => {
-            return getUser(u);
-        }))
+
+        prepareDatabases()
+        .then(() => {
+            return startupApi();
+        })
+        .then(() => {
+            return getUserApi({userName: 'admin', password: 'admin'}, config.dbName);
+        })
+        .then(result => {
+            admin = result.api;
+        })
+        .then(() => {
+            return q.all(config.users.map(u => {
+                return createUser(admin, u)
+                .then(newUser => {
+                    u['_key'] = newUser.body._key;
+                })
+                .then(() => getUserApi(u, config.dbName));
+            }));
+        })
         .then((result => {
             modeler = result.find(r => r.user.userName === 'test-modeler').api;
-            teacher = result.find(r => r.user.userName === 'test-teacher').api;
-            student = result.find(r => r.user.userName === 'test-student').api;
+            teacher1 = result.find(r => r.user.userName === 'test-teacher1').api;
+            student1 = result.find(r => r.user.userName === 'test-student1').api;
+            teacher2 = result.find(r => r.user.userName === 'test-teacher2').api;
+            student2 = result.find(r => r.user.userName === 'test-student2').api;
             done();
         }), err => {
             done(err);
@@ -332,7 +436,7 @@ describe('test process model and execution', () => {
                             properties: {
                                 fileName: { type: 'string' },
                                 mime: {type: 'string' },
-                                content: { }
+                                content: { type: 'string' }
                             },
                             required: ['fileName', 'mime', 'content']
                         }
@@ -394,7 +498,7 @@ describe('test process model and execution', () => {
                             type: 'object',
                             properties: {
                                 mime: {type: 'string' },
-                                content: { }
+                                content: { type: 'string' }
                             },
                             required: ['mime', 'content']
                         }
@@ -411,8 +515,25 @@ describe('test process model and execution', () => {
 
     describe('execute actions', () => {
 
+        it('allows only theachers to execute createThesis', done => {
+            teacher1.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.length).equal(1);
+                expect(res.body[0].actionName).equal('createThesis');
+            }));
+        });
+
+        it('Does not allow students to execute any actions', done => {
+            student1.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.length).equal(0);
+            }));
+        });
+
         it('executes createThesis', done => {
-            teacher.post('/execution').send({
+            teacher1.post('/execution').send({
                 actionId: model.actions.createThesis,
                 documents: {
                     newThesis: {
@@ -443,7 +564,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes assignProfessor', done => {
-            teacher.post('/execution').send({
+            teacher1.post('/execution').send({
                 actionId: model.actions.assignProfessor,
                 caseId: procData.case,
                 documents: {
@@ -462,7 +583,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes assignStudent', done => {
-            teacher.post('/execution').send({
+            teacher1.post('/execution').send({
                 actionId: model.actions.assignStudent,
                 caseId: procData.case,
                 documents: {
@@ -481,7 +602,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes uploadDocument', done => {
-            student.post('/execution').send({
+            student1.post('/execution').send({
                 actionId: model.actions.uploadDocument,
                 caseId: procData.case,
                 documents: {
@@ -505,7 +626,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes rejectUpload', done => {
-            teacher.post('/execution').send({
+            teacher1.post('/execution').send({
                 actionId: model.actions.rejectUpload,
                 caseId: procData.case,
                 documents: {
@@ -519,7 +640,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes editUpload', done => {
-            student.post('/execution').send({
+            student1.post('/execution').send({
                 actionId: model.actions.editUpload,
                 caseId: procData.case,
                 documents: {
@@ -537,7 +658,7 @@ describe('test process model and execution', () => {
         });
 
         it('executes acceptUpload', done => {
-            teacher.post('/execution').send({
+            teacher1.post('/execution').send({
                 actionId: model.actions.acceptUpload,
                 caseId: procData.case,
                 documents: {
@@ -552,7 +673,8 @@ describe('test process model and execution', () => {
     });
 
     after(done => {
-        //delete test database after finishing all tests:
-        modeler.delete('').expect(200).end(handle(done));
+        // delete test database after finishing all tests and remove
+        // previously created test users.
+        done(); //cleanupDatabases().then(() => done(), done);
     });
 });
