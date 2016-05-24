@@ -5,6 +5,7 @@ Opportunistic Business Process Modelling Environment based on ArangoDB
 [![Dependency Status](https://www.versioneye.com/user/projects/5728c63ca0ca35004cf76aad/badge.svg?style=flat)](https://www.versioneye.com/user/projects/5728c63ca0ca35004cf76aad)
 [![Code Climate](https://codeclimate.com/github/remolueoend/OBPM/badges/gpa.svg)](https://codeclimate.com/github/remolueoend/OBPM)
 [![Test Coverage](https://codeclimate.com/github/remolueoend/OBPM/badges/coverage.svg)](https://codeclimate.com/github/remolueoend/OBPM/coverage)
+[![Run in Postman](https://run.pstmn.io/button.svg)](https://app.getpostman.com/run-collection/27283e4c02317662281d)
 
 ## Development Tools
 * Arango DB: `/usr/local/sbin/arangod`
