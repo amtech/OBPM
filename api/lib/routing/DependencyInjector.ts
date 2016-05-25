@@ -8,6 +8,7 @@ import ControllerContext from '../controllers/ControllerContext';
 import ModelState from './ModelState';
 import ModelValidator from './ModelValidator';
 import AuthRepository from '../repositories/AuthRepository';
+import httpErr from './HttpError';
 
 let getAuthRepo = (): q.Promise<AuthRepository> => {
     return AuthRepository.getRepo();
@@ -127,14 +128,14 @@ class DependencyInjector{
     private inject$User(): q.Promise<any>{
         let d = q.defer<any>();
         if (!this.req.user.id) {
-            d.reject(new Error('No authenticated user ID available.'));
+            d.reject(httpErr.server('No authenticated user ID available.'));
             return;
         }
         getAuthRepo().then(repo => {
             repo.getCurrentUser(this.req)
             .then(user => {
                 if (!user) {
-                    d.reject(new Error('Could not find user instance for current user ID.'));
+                    d.reject(httpErr.server('Could not find user instance for current user ID.'));
                     return;
                 }
                 d.resolve(user);

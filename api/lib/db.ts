@@ -70,8 +70,18 @@ let getDefaultElements = () => {
                     "lastName": "admin",
                     "email": "admin@obpm",
                     "password": "pbkdf2$10000$1050c22e5a105bf4cdb3cb11ce81c05824169f39f25def2d723b2d672124082a7b1553473141007cd97540604ad20301a7beb26dc048f76c0672b5b458c2af52$1ab1682e645156807386af57550f31aaea29b693019060f7d8b57b323f67d383702d3d9480417cc5f0fc901d8d58c283400dd7ac6dd2c749bc5001969e99a0b3",
-                    "roles": ["admin"]
-                }
+                    "roles": ["admin", "modeler", "teacher", "student"]
+                }, after: (admin => {
+                    return {
+                        col: 'AccessToken',
+                        data: {
+                            "accessToken": "4ff50670866eb8d7f8ce10bf61e8ece6faeb56ac",
+                            "clientId": "postman",
+                            "expires": "2017-05-25T10:24:44.313Z",
+                            "userId": admin._key
+                        }
+                    }
+                })
             }, {
                 col: 'Client',
                 data: {
@@ -165,7 +175,12 @@ export class Database{
             }));
             // documents:
             ps = ps.concat(elems.docs.map(d => {
-                return toQ(this.conn.collection(d.col).save(d.data));
+                return toQ(this.conn.collection(d.col).save(d.data)).then(nd => {
+                    if (typeof d.after === 'function') {
+                        let a = d.after(nd);
+                        return toQ(this.conn.collection(a.col).save(a.data));
+                    }
+                });
             }));
             // AQL functions:
             ps = ps.concat(elems.aql.map(a => {
@@ -204,7 +219,7 @@ export class Database{
     public single(query, throwIfNull?: boolean): q.Promise<any>{
         return this.q(query).then(result => {
             if(throwIfNull === true && !result.hasNext()) {
-                throw new Error('Could not find a single resource for query: ' + query);
+                throw httpErr.notFound('Could not find a single resource.');
             }
             return toQ(result.next());
         });

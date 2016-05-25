@@ -35,10 +35,7 @@ let model = {
         }, err => {
             if((<HttpError>err).isAuthError) done(null, null);
             else done(err);
-        })
-        handleDone(getRepo().then(repo => {
-            return repo.verifyUser(username, password);
-        }), done);
+        });
     },
 
     getClient: (id: string, secret: string, done) => {

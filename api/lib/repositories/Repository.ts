@@ -20,7 +20,7 @@ export default class Repository {
         let pModel = this.db.getModel(this.modelType, key);
         return !throwIfNotExisting ? pModel : pModel.then(m => {
             if(m) return m;
-            throw httpErr.execution(`No resource of type ${this.modelType} and key ${key} could be found.`);
+            throw httpErr.notFound(`No resource of type ${this.modelType} and key ${key} could be found.`);
         });
     }
 

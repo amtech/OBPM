@@ -10,26 +10,10 @@ import httpErr from '../routing/HttpError';
 import * as actionResult from '../routing/ActionResult';
 import db, {Database} from '../db';
 import ControllerContext from './ControllerContext';
+import UpdatePassword from '../viewmodels/UpdatePassword';
 import IModel from '../models/IModel';
 import * as joi from 'joi';
 
-/**
- * View Model Class used for changing the password of an exiting user.
- */
-export class UpdatePasswordViewModel implements IModel {
-
-    public userName: string;
-    public oldPassword: string;
-    public newPassword: string;
-
-    getSchema(): joi.ObjectSchema {
-        return joi.object({
-            userName: joi.string().required(),
-            oldPassword: joi.string().required(),
-            newPassword: joi.string().required()
-        });
-    }
-}
 
 @CtrlAuth(['admin'])
 export default class UserController extends Controller {
@@ -82,9 +66,9 @@ export default class UserController extends Controller {
      *
      * @returns {q.Promise}
      */
-    @ActionModel(UpdatePasswordViewModel, false)
+    @ActionModel(UpdatePassword, false)
     @ActionAuth([])
-    changePassword($user, $model: UpdatePasswordViewModel) {
+    changepassword($user, $model: UpdatePassword) {
         return this.repo.updatePassword(
             $user,
             $model.userName,

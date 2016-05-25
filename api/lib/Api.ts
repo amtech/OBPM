@@ -46,6 +46,7 @@ export default class App {
             }
 
             this._server = this.express.listen(appConfig().apiPort, () => {
+                console.log('oBPM service running on port ' + appConfig().apiPort);
                 d.resolve();
             });
         } catch (err) {

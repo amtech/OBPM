@@ -74,7 +74,7 @@ export default class ActionExecutor{
      * @returns {q.Promise<any>}
      */
     execute(): q.Promise<any>{
-        if(this.isExecuted) throw httpErr.server('ActionExecuter already executed.');
+        if(this.isExecuted) throw httpErr.server('ActionExecuter already executed.', 'already_executed');
         this.isExecuted = true;
 
         return this.getCaseKey()
@@ -83,10 +83,10 @@ export default class ActionExecutor{
         // validate execution and map data to docs:
         .then(c => {
             if(c) {this.caseInstance = c }
-            else if(!this.caseInstance) { throw httpErr.execution('Invalid case ID.'); }
+            else if(!this.caseInstance) { throw httpErr.execution('Invalid case ID.', 'invalid_case'); }
 
             if(!ActionExecutor.isExecutableByUser(this.action, this.user, this.caseInstance)) {
-                throw httpErr.execution('Not permitted to execute this action.');
+                throw httpErr.auth('Not permitted to execute this action.');
             }
 
             return q.all(Object.getOwnPropertyNames(this.action.documents).map(d => {
@@ -172,7 +172,7 @@ export default class ActionExecutor{
             if(this.context.caseId){
                 return q.fcall(() => this.context.caseId);
             }
-            throw httpErr.execution('This execution requires a valid case ID.');
+            throw httpErr.execution('This execution requires a valid case ID.', 'missing_case');
         }
         return this.internalActions.createCase().then(c => {
             this.caseInstance = c;
@@ -214,8 +214,9 @@ export default class ActionExecutor{
             docInfo.doc.__mappedData = execData;
 
             let newState = docInfo.actionDef.endState || docInfo.actionDef.state;
+            if(newState instanceof Array) newState = newState[0];
             if(!newState) {
-                throw httpErr.execution('Expecting an end state but either endState nor state wa defined.');
+                throw httpErr.execution('Expecting an end state but either endState nor state wa defined.', 'missing_state');
             }
             docInfo.doc.state = newState;
             return docInfo.doc;
@@ -235,17 +236,17 @@ export default class ActionExecutor{
     getDocInfo(name: string): q.Promise<any>{
         let contextDoc = this.context.documents[name],
             actionDef = this.action.documents[name];
-        if(!contextDoc) throw new Error(`Missing document ${name}.`);
+        if(!contextDoc) throw httpErr.execution(`Missing document ${name}.`, 'missing_doc');
 
         // Action expects existing doc but no key was provided:
         if(actionDef.state && !contextDoc.id)
-            throw httpErr.execution('Expecting identifier for document ' + name);
+            throw httpErr.execution('Expecting identifier for document ' + name, 'missing_identifier');
 
         return this.getDocument(actionDef, contextDoc)
             .then(doc => {
-                if(!doc) throw new Error(
+                if(!doc) throw httpErr.execution(
                     `Provided ${name} is not in state ${actionDef.state}`
-                );
+                , 'wrong_state');
 
                 return {contextDoc, actionDef, doc, name};
             });
@@ -276,21 +277,21 @@ export default class ActionExecutor{
             return this.caseRepo.getModelTree().then(tree => {
                 let model = tree.getValue(actionDef.path);
 
-                if (!model) throw httpErr.execution('Invalid document path definied in Action.');
-                if(model.type !== type) throw httpErr.execution('Invalid document type definied in Action.');
+                if (!model) throw httpErr.execution('Invalid document path definied in Action.', 'invalid_path');
+                if(model.type !== type) throw httpErr.execution('Invalid document type definied in Action.', 'invalid_type');
 
                 let siblings = this.caseInstance.getValue(actionDef.path),
                     sArr = siblings instanceof Array ? siblings : siblings ? [siblings] : [];
 
                 if(model.__max && model.__max <= sArr.length) {
-                    throw httpErr.execution('Already maximum documents of this type attached to parent.');
+                    throw httpErr.execution('Already maximum documents of this type attached to parent.', 'invalid_child');
                 }
 
                 let paths = actionDef.path.split('.');
                 let parentPath = paths.slice(0, -1).join('.');
                 let parent = parentPath.length ? this.caseInstance.getValue(parentPath) :
                     this.caseInstance.root;
-                if (!parent) throw httpErr.execution('Invalid document path definied in Action.');
+                if (!parent) throw httpErr.execution('Invalid document path definied in Action.', 'invalid_path');
 
                 let newDoc = { type, data: {} };
                 this.newEdges.push({
@@ -298,8 +299,7 @@ export default class ActionExecutor{
                     to: newDoc,
                     data: {
                         property: paths[paths.length - 1],
-                        max: model.__max,
-                        min: model.__min
+                        max: model.__max
                     }
                 });
 

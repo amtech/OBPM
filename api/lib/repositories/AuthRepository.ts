@@ -85,7 +85,7 @@ export default class AuthRespository extends Repository {
         `)
         .then(eu => {
             if (eu) {
-                throw httpErr.execution('There is already a user with the same user name.');
+                throw httpErr.execution('There is already a user with the same user name.', 'dublicate_user');
             }
         })
         .then(() => {
@@ -100,7 +100,7 @@ export default class AuthRespository extends Repository {
     public updateUser(newData: UpdateUser, key): q.Promise<any> {
         return this.getUser(key, true)
         .then(user => {
-            if(!user) throw httpErr.execution('Could not find user.');
+            if(!user) throw httpErr.notFound('Could not find user.');
             return user;
         })
         .then(user => {
@@ -200,7 +200,7 @@ export default class AuthRespository extends Repository {
             for token in AccessToken
             filter token.accessToken == '${token}'
             return token
-        `, true);
+        `);
     }
 
     public getCurrentUser(req: express.Request): q.Promise<any> {

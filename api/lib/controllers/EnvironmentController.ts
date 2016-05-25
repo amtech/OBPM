@@ -12,7 +12,7 @@ export default class EnvironmentController extends Controller {
 
     public init(context: ControllerContext): q.Promise<any>{
         return super.init(context).then(() => {
-            return db(context.request.params['tid']).then(database => {
+            return db(context.request.params['process']).then(database => {
                 this.repo = new EnvironmentRepository(database);
             });
         });

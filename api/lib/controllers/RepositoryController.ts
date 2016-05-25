@@ -21,7 +21,7 @@ export default class RepositoryController<T extends Repository> extends Controll
 
     public init(context: ControllerContext): q.Promise<any>{
         return super.init(context).then(() => {
-            return db(context.request.params['tid']).then(database => {
+            return db(context.request.params['process']).then(database => {
                 this.repo = new this.repoType(database);
             });
         });
@@ -37,10 +37,6 @@ export default class RepositoryController<T extends Repository> extends Controll
 
     public put($id, $model) {
         return this.repo.updateModel($id, $model);
-    }
-
-    public patch($id, $model): q.Promise<any> {
-        return this.repo.patchModel($id, $model);
     }
 
     public post($model): q.Promise<any> {

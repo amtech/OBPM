@@ -26,9 +26,4 @@ export default class RecordController extends RepositoryController<RecordReposit
     put($id, $model): q.Promise<any> {
         throw httpErr.notImplemented('Cannot edit a recorded document.');
     }
-
-    patch($id, $model): q.Promise<any> {
-        throw httpErr.notImplemented('Cannot edit a recorded document.');
-    }
-
 }

@@ -207,10 +207,10 @@ describe('test process model and execution', () => {
      */
     before(done => {
 
-        prepareDatabases()
+        /*prepareDatabases()
         .then(() => {
             return startupApi();
-        })
+        })*/
         q.fcall(() => {})
         .then(() => {
             return getUserApi({userName: 'admin', password: 'admin'}, config.dbName);
@@ -220,13 +220,16 @@ describe('test process model and execution', () => {
         })
         .then(() => {
             return q.all(config.users.map(u => {
+                return getUserApi(u, config.dbName)
+            }));
+            /*return q.all(config.users.map(u => {
                 return createUser(admin, u)
                 .then(newUser => {
                     u['_key'] = newUser.body._key;
                 })
                 .then(() => getUserApi(u, config.dbName));
-            }));
-        })
+            }));*/
+        }, err => { console.log(err); return null; })
         .then((result => {
             modeler = result.find(r => r.user.userName === 'test-modeler').api;
             teacher1 = result.find(r => r.user.userName === 'test-teacher1').api;
@@ -239,7 +242,7 @@ describe('test process model and execution', () => {
         });
     });
 
-    describe('create process data model', () => {
+    xdescribe('create process data model', () => {
         it('creates a new case', done => {
             modeler.post('/datamodel').send({ type: 'Case' })
             .expect(200)

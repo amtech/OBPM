@@ -52,29 +52,58 @@ export default class RouterRegistrar{
 
         //this.app.use(morgan('combined'));
 
-        // auth
+        /**
+		 * Authentication Routes
+		 * All requests on these routes get handled by the oauth2-server module.
+		 */
+		// executes this.oauth.grant() for authentication requests:
         this.app.all('/oauth/token', this.oauth.grant());
+		// gets executes for every incoming request regardless of its url or method.
+		// validates the provided authentication information:
         this.app.use(this.oauth.authorise());
 
-        // specific REST routes
+
+		/**
+		 * REST Routes.
+		 * All requests for these routes get handled by api/lib/routing/Router.ts.
+		 */
+        // Handle requests to [/user)] [/user/id] of any method.
+		// Both routes use the controller 'UserController':
         this.app.use('/user/:id(\\d+)', this._router.handle({controller: 'user'}));
+        this.app.use('/user/:action', this._router.handle({controller: 'user'}));
         this.app.use('/user$', this._router.handle({controller: 'user'}));
-        this.app.use('/:tid$', this._router.handle({ controller: 'environment' }));
 
-        // generic REST routes
-        this.app.use('/:tid/:controller/:id(\\d+)', this._router.handle());
-        this.app.use('/:tid/:controller/:action', this._router.handle());
-        this.app.use('/:tid/:controller$', this._router.handle());
+		// Handles request for requests to [/process_name].
+		// Requests get forwarded to controller EnvironmentController:
+        this.app.use('/:process$', this._router.handle({ controller: 'environment' }));
 
+        // Handle all generic REST request to:
+		// [/process_name/controller_name/id] => action = HTTP-method,
+		// [/process_name/controller_name/action] and
+		// [/process_name/controller_name/] => action = HTTP-method
+        this.app.use('/:process/:controller/:id(\\d+)', this._router.handle());
+        this.app.use('/:process/:controller/:action', this._router.handle());
+        this.app.use('/:process/:controller$', this._router.handle());
+
+
+		/**
+		 * Error Handling Routes.
+		 * These middlewares handle unhandled requests and previously errors:
+		 */
+		// Handles previously raised authentication errors:
         this.app.use(this.oauth.errorHandler());
 
+		// Last middleware in stack. Handles all not previously handled requests by raising
+		// an HTTP-404 error.
         this.app.use((req, res, next) => {
             next(HttpError.notFound('Could not find a matching route for the given request.'));
         });
 
+		// Global error handler handling all possible previously raised errors:
         this.app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
             let status = err instanceof HttpError ? (<HttpError>err).httpCode : 500;
             res.status(status).send({
+                code: err.code,
                 error: err.message,
                 details: err.errors,
                 stack: err.stack

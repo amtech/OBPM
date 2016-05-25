@@ -16,10 +16,17 @@ export default class HttpError extends Error{
         return this._httpCode;
     }
 
-    constructor(httpCode: number | HttpErrorCode, message?: string, baseError?: Error){
+    public _code: any;
+    public get code(): any {
+        return this._code;
+    }
+
+    constructor(httpCode: HttpErrorCode, code: any, message?: string, baseError?: Error){
+        code = code || 'unknown_error';
         message = message || (baseError ? baseError.message : 'An error occurred while processing the request');
         super(message);
         this._httpCode = httpCode;
+        this._code = code;
 
         if(baseError){
             this.stack = baseError.stack;
@@ -48,45 +55,45 @@ export default class HttpError extends Error{
         return new HttpValidationError(errors, message, baseErr);
     }
 
-    public static  server(): HttpError;
-    public static  server(baseErr: Error): HttpError;
-    public static  server(message: string): HttpError;
-    public static  server(param1?: Error | string, message?: string): HttpError{
-        let err: Error,
-            msg: string;
-        if(param1 instanceof Error){
-            err = param1;
-            msg = message;
-        } else if(typeof param1 === 'string'){
-            msg = param1;
-        }
-        return new HttpError(HttpErrorCode.SERVER, msg, err);
+    public static  server(message?: string, code?: any): HttpError{
+        return new HttpError(HttpErrorCode.SERVER, code, message);
     }
 
-    public static notFound(message?: string): HttpError{
-        return new HttpError(HttpErrorCode.NOT_FOUND, (message || 'The requested ressource could not be found.'));
+    public static notFound(message?: string, code?: any): HttpError{
+        return new HttpError(
+            HttpErrorCode.NOT_FOUND,
+            code || 'not_found',
+            (message || 'The requested ressource could not be found.'));
     }
 
-    public static routeNotFound(message?: string): HttpError{
-        return new HttpRouteNotFoundError(message);
+    public static routeNotFound(message?: string, code?: any): HttpError{
+        return new HttpRouteNotFoundError(code, message);
     }
 
-    public static execution(message?: string): HttpError{
-        return new HttpError(HttpErrorCode.CLIENT, (message || 'Invalid execution.'));
+    public static execution(message?: string, code?: any): HttpError{
+        return new HttpError(HttpErrorCode.CLIENT,
+            code || 'invalid_execution',
+            (message || 'Invalid execution request.'));
     }
 
-    public static notImplemented(message?: string): HttpError{
-        return new HttpError(HttpErrorCode.NOT_IMPLEMENTED, (message || 'Function or method not implemented.'));
+    public static notImplemented(message?: string, code?: any): HttpError{
+        return new HttpError(HttpErrorCode.NOT_IMPLEMENTED,
+            code || 'not_implemented',
+            (message || 'Function or method not implemented.'));
     }
 
-    public static auth(message?: string): HttpError {
-        return new HttpError(HttpErrorCode.AUTH, (message || 'Authorization error.'));
+    public static auth(message?: string, code?: any): HttpError {
+        return new HttpError(HttpErrorCode.AUTH,
+            code || 'not_authorized',
+            (message || 'You are not authrorized to execute this request.'));
     }
 }
 
 export class HttpRouteNotFoundError extends HttpError{
-    constructor(message?: string){
-        super(HttpErrorCode.NOT_FOUND, message || 'Route not found.');
+    constructor(code?: any, message?: string){
+        super(HttpErrorCode.NOT_FOUND,
+            code || 'route_not_found',
+            message || 'The requested route not found.');
     }
 }
 
@@ -96,8 +103,10 @@ export class HttpValidationError extends HttpError{
         return this._errors;
     }
 
-    constructor(errors: joi.ValidationErrorItem[], message?: string, baseErr?: Error){
-        super(HttpErrorCode.VALIDATION, (message || 'one or more validation errors occurred'), baseErr);
+    constructor(errors: joi.ValidationErrorItem[], message?: string, code?: any){
+        super(HttpErrorCode.VALIDATION,
+            code || 'validation_error',
+            (message || 'one or more validation errors occurred.'));
         this._errors = errors;
     }
 
