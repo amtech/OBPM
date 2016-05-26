@@ -143,7 +143,7 @@ export default class DataModelRespository extends Repository {
         .then(model => {
             return this.db.edgeCollection('hasModel').outEdges(model)
             .then((conns) => {
-                this.db.edgeCollection('hasModel').inEdges(model)
+                return this.db.edgeCollection('hasModel').inEdges(model)
                 .then(parentConns => {
                     return { model, conns, parentConn: parentConns[0] };
                 });
@@ -154,15 +154,10 @@ export default class DataModelRespository extends Repository {
                 return this.deleteType(c._to.substring(c._to.indexOf('/') + 1));
             }))
             .then(() => {
-                return q.all(data.conns.map(c => {
-                    return this.db.edgeCollection('hasModel').remove(c);
-                }))
-                .then(() => {
-                    return this.db.edgeCollection('hasModel').remove(data.parentConn);
-                })
-                .then(() => {
-                    this.removeModel(key);
-                });
+                return this.db.edgeCollection('hasModel').remove(data.parentConn)
+            })
+            .then(() => {
+                this.removeModel(key);
             });
         });
     }

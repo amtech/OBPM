@@ -52,6 +52,12 @@ export default class RouterRegistrar{
 
         //this.app.use(morgan('combined'));
 
+        this.app.use((req, res, next) => {
+            let x = req;
+            next();
+        });
+
+
         /**
 		 * Authentication Routes
 		 * All requests on these routes get handled by the oauth2-server module.

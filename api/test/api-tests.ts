@@ -3,11 +3,11 @@ import * as chaiAsPromised from 'chai-as-promised';
 import * as sinonChai from 'sinon-chai';
 import * as sinon from 'sinon';
 import * as supertest from 'supertest';
-import db, {Database} from '../../lib/db';
+import db, {Database} from '../lib/db';
 var defaults = require('superagent-defaults');
 import * as q from 'q';
 import * as fs from 'fs';
-import API from '../../lib/Api';
+import API from '../lib/Api';
 
 chai.use(chaiAsPromised);
 chai.use(sinonChai);
@@ -60,7 +60,14 @@ let config = {
 
 // process model data:
 let model = {
-    types: {case: '', thesis: '', prof: '', student: '', upload: ''},
+    types: {
+        case: '',
+        thesis: '',
+        prof: '',
+        student: '',
+        upload: '',
+        test1: '', test2: ''
+    },
     actions: {
         createThesis: '',
         uploadDocument: '',
@@ -96,7 +103,7 @@ let btoa = (data: any): string => {
 }
 
 let getFileStr = (name: string): string => {
-    var file = fs.readFileSync(__dirname + '/../../../test/e2e/' + name);
+    var file = fs.readFileSync(__dirname + '/../../test/files/' + name);
     return btoa(file);
 }
 
@@ -207,11 +214,10 @@ describe('test process model and execution', () => {
      */
     before(done => {
 
-        /*prepareDatabases()
+        prepareDatabases()
         .then(() => {
             return startupApi();
-        })*/
-        q.fcall(() => {})
+        })
         .then(() => {
             return getUserApi({userName: 'admin', password: 'admin'}, config.dbName);
         })
@@ -220,16 +226,13 @@ describe('test process model and execution', () => {
         })
         .then(() => {
             return q.all(config.users.map(u => {
-                return getUserApi(u, config.dbName)
-            }));
-            /*return q.all(config.users.map(u => {
                 return createUser(admin, u)
                 .then(newUser => {
                     u['_key'] = newUser.body._key;
                 })
                 .then(() => getUserApi(u, config.dbName));
-            }));*/
-        }, err => { console.log(err); return null; })
+            }));
+        })
         .then((result => {
             modeler = result.find(r => r.user.userName === 'test-modeler').api;
             teacher1 = result.find(r => r.user.userName === 'test-teacher1').api;
@@ -242,7 +245,7 @@ describe('test process model and execution', () => {
         });
     });
 
-    xdescribe('create process data model', () => {
+    describe('create process data model', () => {
         it('creates a new case', done => {
             modeler.post('/datamodel').send({ type: 'Case' })
             .expect(200)
@@ -324,6 +327,85 @@ describe('test process model and execution', () => {
                         type: 'Person'
                     }
                 });
+            }));
+        });
+
+        it('cannot edit type Case', done => {
+            modeler.put('/datamodel').send({
+                type: 'Case'
+            })
+            .expect(400)
+            .end(handle(done));
+        });
+
+        it('allows creating type Test1', done => {
+            modeler.post('/datamodel').send({
+                type: 'Test1',
+                parent: model.types.case,
+                property: 'test1',
+                max: 1
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.types.test1 = res.body._key;
+            }));
+        });
+        it('allows creating type Test2', done => {
+            modeler.post('/datamodel').send({
+                type: 'Test2',
+                parent: model.types.test1,
+                property: 'test2',
+                max: 1
+            })
+            .expect(200)
+            .end(handle(done, res => {
+                model.types.test2 = res.body._key;
+            }));
+        });
+
+        it('allows changing the parent of a type', done => {
+            modeler.put('/datamodel/' + model.types.test1).send({
+                type: 'Test1',
+                parent: model.types.student,
+                property: 'test1',
+                max: 1
+            })
+            .expect(200)
+            .end(handle(done));
+        });
+
+        it('created a correct model tree after edit', done => {
+            modeler.get('/datamodel/tree')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body).to.have.property('root');
+                expect(res.body.root).to['containSubset']({
+                    student: {
+                        __max: 1,
+                        type: 'Person',
+                        test1: {
+                            type: 'Test1',
+                            test2: {
+                                type: 'Test2'
+                            }
+                        }
+                    }
+                });
+            }));
+        });
+
+        it('deletes Test1 and all Sub-Types', done => {
+            modeler.delete('/datamodel/' + model.types.test1)
+            .expect(200)
+            .end(handle(done));
+        });
+
+        it('removed deleted types', done => {
+            modeler.get('/datamodel')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.every(t => t.type !== 'Test1')).equal(true);
+                expect(res.body.every(t => t.type !== 'Test2')).equal(true);
             }));
         });
     });
@@ -424,7 +506,7 @@ describe('test process model and execution', () => {
         it('creates action uploadDocument', done => {
             modeler.post('/action').send({
                 name: 'uploadDocument',
-                roles: ['student'],
+                roles: ['%student.data.userName'],
                 documents: {
                     thesis: {
                         type: 'Thesis',
@@ -456,7 +538,7 @@ describe('test process model and execution', () => {
         it('creates action rejectUpload', done => {
             modeler.post('/action').send({
                 name: 'rejectUpload',
-                roles: ['teacher'],
+                roles: ['%professor.data.userName'],
                 documents: {
                     upload: {
                         type: 'Upload',
@@ -474,7 +556,7 @@ describe('test process model and execution', () => {
         it('creates action acceptUpload', done => {
             modeler.post('/action').send({
                 name: 'acceptUpload',
-                roles: ['teacher'],
+                roles: ['%professor.data.userName'],
                 documents: {
                     upload: {
                         type: 'Upload',
@@ -492,7 +574,7 @@ describe('test process model and execution', () => {
         it('creates action editUpload', done => {
             modeler.post('/action').send({
                 name: 'editUpload',
-                roles: ['student'],
+                roles: ['%student.data.userName'],
                 documents: {
                     upload: {
                         type: 'Upload',
@@ -519,7 +601,7 @@ describe('test process model and execution', () => {
 
     describe('execute actions', () => {
 
-        it('allows only theachers to execute createThesis', done => {
+        it('allows theachers to execute createThesis', done => {
             teacher1.get('/action/executables')
             .expect(200)
             .end(handle(done, res => {
@@ -536,7 +618,7 @@ describe('test process model and execution', () => {
             }));
         });
 
-        it('executes createThesis', done => {
+        it('teacher1 executes createThesis', done => {
             teacher1.post('/execution').send({
                 actionId: model.actions.createThesis,
                 documents: {
@@ -567,7 +649,17 @@ describe('test process model and execution', () => {
             }));
         });
 
-        it('executes assignProfessor', done => {
+        it('allows theachers to execute createThesis and assignProfessor', done => {
+            teacher1.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.length).equal(2);
+                expect(res.body.some(a => a.actionName === 'createThesis')).equal(true);
+                expect(res.body.some(a => a.actionName === 'assignProfessor')).equal(true);
+            }));
+        });
+
+        it('teacher2 executes assignProfessor', done => {
             teacher1.post('/execution').send({
                 actionId: model.actions.assignProfessor,
                 caseId: procData.case,
@@ -577,7 +669,7 @@ describe('test process model and execution', () => {
                     },
                     newProfessor: {
                         data: {
-                            userName: 'test-teacher'
+                            userName: 'test-teacher1'
                         }
                     }
                 }
@@ -586,7 +678,7 @@ describe('test process model and execution', () => {
             .end(handle(done));
         });
 
-        it('executes assignStudent', done => {
+        it('teacher1 executes assignStudent', done => {
             teacher1.post('/execution').send({
                 actionId: model.actions.assignStudent,
                 caseId: procData.case,
@@ -596,7 +688,7 @@ describe('test process model and execution', () => {
                     },
                     newStudent: {
                         data: {
-                            userName: 'test-student'
+                            userName: 'test-student1'
                         }
                     }
                 }
@@ -605,7 +697,24 @@ describe('test process model and execution', () => {
             .end(handle(done));
         });
 
-        it('executes uploadDocument', done => {
+        it('allows student1 to execute uploadDocument', done => {
+            student1.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.length).equal(1);
+                expect(res.body.some(a => a.actionName === 'uploadDocument')).equal(true);
+            }));
+        });
+
+        it('Does not allow student2 to execute uploadDocument', done => {
+            student2.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.length).equal(0);
+            }));
+        });
+
+        it('student1 executes uploadDocument', done => {
             student1.post('/execution').send({
                 actionId: model.actions.uploadDocument,
                 caseId: procData.case,
@@ -629,7 +738,25 @@ describe('test process model and execution', () => {
             }));
         });
 
-        it('executes rejectUpload', done => {
+        it('allows teacher1 to execute rejectUpload and acceptUpload', done => {
+            teacher1.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.some(a => a.actionName === 'acceptUpload')).equal(true);
+                expect(res.body.some(a => a.actionName === 'rejectUpload')).equal(true);
+            }));
+        });
+
+        it('Does not allow teacher2 to execute rejectUpload and acceptUpload', done => {
+            teacher2.get('/action/executables')
+            .expect(200)
+            .end(handle(done, res => {
+                expect(res.body.some(a => a.actionName === 'acceptUpload')).equal(false);
+                expect(res.body.some(a => a.actionName === 'rejectUpload')).equal(false);
+            }));
+        });
+
+        it('teacher1 executes rejectUpload', done => {
             teacher1.post('/execution').send({
                 actionId: model.actions.rejectUpload,
                 caseId: procData.case,
@@ -643,7 +770,7 @@ describe('test process model and execution', () => {
             .end(handle(done));
         });
 
-        it('executes editUpload', done => {
+        it('student1 executes editUpload', done => {
             student1.post('/execution').send({
                 actionId: model.actions.editUpload,
                 caseId: procData.case,
@@ -661,7 +788,7 @@ describe('test process model and execution', () => {
             .end(handle(done));
         });
 
-        it('executes acceptUpload', done => {
+        it('teacher1 executes acceptUpload', done => {
             teacher1.post('/execution').send({
                 actionId: model.actions.acceptUpload,
                 caseId: procData.case,
@@ -679,6 +806,6 @@ describe('test process model and execution', () => {
     after(done => {
         // delete test database after finishing all tests and remove
         // previously created test users.
-        done(); //cleanupDatabases().then(() => done(), done);
+        done() //cleanupDatabases().then(() => done(), done);
     });
 });

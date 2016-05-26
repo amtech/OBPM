@@ -8,7 +8,7 @@ import httpErr from '../routing/HttpError';
 import ControllerContext from './ControllerContext';
 import AuthRepository from '../repositories/AuthRepository';
 
-@CtrlAuth(['modeler'])
+@CtrlAuth(['admin'])
 export default class ExecutionController extends RepositoryController<ExecutionRepository> {
 
     constructor() {

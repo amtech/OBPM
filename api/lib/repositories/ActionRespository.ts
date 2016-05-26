@@ -45,19 +45,23 @@ export default class ActionRespository extends Repository {
         return this.getActionCases()
         .then((actions: any[]) => {
             return q.all(actions.map(r => this.filterByUser(r, user)))
-            .then((result: boolean[]) => {
+            .then((result: any[]) => {
+                let actionResults = [];
                 for (let i = 0; i < result.length; i++) {
-                    if (result[i] !== true) {
-                        actions.splice(i, 1);
+                    if (result[i] === true && !actions[i].cases) {
+                        actionResults.push(actions[i]);
+                    } else if(result[i].length > 0) {
+                        actions[i].cases = result[i];
+                        actionResults.push(actions[i]);
                     }
                 }
 
-                return actions;
+                return actionResults;
             });
         });
     }
 
-    protected filterByUser(action, user): q.Promise<boolean> {
+    protected filterByUser(action, user): q.Promise<any> {
         if (!action.cases) {
             return q.fcall(() => {
                 return ActionExecutor.isExecutableByUser(action, user);
@@ -66,14 +70,13 @@ export default class ActionRespository extends Repository {
 
         return q.all(action.cases.map(c => this.caseRepo.getCaseTree(c.caseId)))
         .then((trees: ObjectTree[])  => {
+            let validCases = []
             for (let i = 0; i < trees.length; i++) {
-                if(!ActionExecutor.isExecutableByUser(action, user, trees[i])) {
-                    action.cases.splice(i, 1);
+                if(ActionExecutor.isExecutableByUser(action, user, trees[i])) {
+                    validCases.push(action.cases[i]);
                 }
             }
-        })
-        .then(() => {
-            return action.cases.length > 0;
+            return validCases;
         });
     }
 
@@ -111,9 +114,9 @@ export default class ActionRespository extends Repository {
                                 let matchingDocs = (
                                     for doc in caseDocs[0]
                                         filter actionDoc.type == doc.vertex.type &&
-                                        actionDoc.state == doc.vertex.state &&
+                                        doc.vertex.state IN actionDoc.state &&
                                         doc.vertex.type != 'Case'
-                                        return doc.vertex
+                                        return doc.vertex._key
                                 )
                                 filter !has(actionDoc, 'state') || length(matchingDocs) > 0
                                 return {actionDoc, matchingDocs}

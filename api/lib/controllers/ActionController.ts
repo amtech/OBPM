@@ -17,13 +17,6 @@ export default class ActionController extends RepositoryController<ActionResposi
     }
 
     @ActionAuth([])
-    public byName($params, $query): q.Promise<any>{
-        return actionResult.res(
-            this.repo.findbyName($params['name'] || $query['name'])
-        );
-    }
-
-    @ActionAuth([])
     public executables($user): q.Promise<any> {
         return this.repo.getExecutableActions($user);
     }

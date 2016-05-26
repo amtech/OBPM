@@ -36,9 +36,8 @@
     "typescript": "^1.8.2"
   },
   "scripts": {
-    "test": "mocha dist/test/**/*.js",
-    "start": "node ./dist/lib/index.js",
-    "performance": "node --allow-natives-syntax ./node_modules/mocha/bin/_mocha --reporter mocha-performance ./dist/test/**/*.js"
+    "test": "mocha dist/test/api-tests.js",
+    "start": "node ./dist/lib/index.js"
   },
   "repository": {
     "type": "git",

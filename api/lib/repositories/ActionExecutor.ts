@@ -105,6 +105,11 @@ export default class ActionExecutor{
                 });
             })))
             .then(() => {
+                if(this.action.createsNewCase) {
+                    let vCaseDoc = this.stripDocument(this.caseInstance.root);
+                    vCaseDoc.type = 'Case';
+                    docs.splice(0, 0, vCaseDoc);
+                }
                 return docs;
             });
         })
