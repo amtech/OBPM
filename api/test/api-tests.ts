@@ -806,6 +806,6 @@ describe('test process model and execution', () => {
     after(done => {
         // delete test database after finishing all tests and remove
         // previously created test users.
-        done() //cleanupDatabases().then(() => done(), done);
+        cleanupDatabases().then(() => done(), done);
     });
 });
